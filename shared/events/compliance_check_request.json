@@ -1,0 +1,12 @@
+{
+  "event": "compliance_check_request",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "platforms_to_scan": [],
+  "scan_scope": "visual_final",
+  "copy_fields": {},
+  "visual_prompts": {},
+  "aplus_content": {},
+  "ttl_seconds": 3600
+}

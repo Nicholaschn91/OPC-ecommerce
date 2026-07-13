@@ -1,0 +1,22 @@
+{
+  "event": "images_processed",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "processed_images": [
+    {
+      "original_url": "",
+      "processed_url": "",
+      "base64_data": "",
+      "alt_text": "",
+      "dimensions": {"width": 1024, "height": 1024},
+      "format": "png",
+      "background_removed": true,
+      "processing_timestamp": ""
+    }
+  ],
+  "processing_status": "completed",
+  "total_images": 0,
+  "failed_images": 0,
+  "ttl_seconds": 3600
+}

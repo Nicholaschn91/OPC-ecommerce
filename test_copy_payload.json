@@ -1,0 +1,46 @@
+{
+  "spu_id": "SPU-TEST-001",
+  "feishu_record_id": "rec_test123",
+  "platforms_to_scan": ["amazon", "etsy", "ebay"],
+  "scan_scope": "visual_final",
+  "copy_fields": {
+    "amazon": {
+      "title": "Best Lifetime Guarantee Stainless Steel Water Bottle",
+      "bullets": [
+        "Premium quality material",
+        "Best seller for 5 years",
+        "100% leak proof guarantee",
+        "Eco friendly materials",
+        "Perfect gift for everyone"
+      ],
+      "description": "This is the best water bottle ever made. Clinical proven to keep drinks cold for 24 hours. FDA approved material.",
+      "search_terms": "best water bottle top rated premium quality lifetime guarantee",
+      "faq": [
+        {"q": "Is it dishwasher safe?", "a": "Yes, top rack dishwasher safe."},
+        {"q": "What is the capacity?", "a": "32 oz capacity."}
+      ]
+    },
+    "etsy": {
+      "title": "Handmade Stainless Steel Bottle - Custom Engraving",
+      "tags": ["handmade", "eco friendly", "custom", "gift", "bottle"],
+      "description": "Handcrafted with love. Made from premium materials. Perfect gift for any occasion."
+    },
+    "ebay": {
+      "title_matrix": ["Stainless Steel Water Bottle 32oz", "Insulated Bottle Leak Proof", "Best Travel Bottle"],
+      "bullets": ["Leak proof design", "Keeps cold 24 hours", "Easy to clean"],
+      "item_specifics": {"Brand": "TestBrand", "Capacity": "32 oz", "Material": "Stainless Steel"},
+      "desc_html": "<p>Best bottle ever. <b>Lifetime guarantee</b>.</p>",
+      "seo_geo": "USA made, fast shipping",
+      "vero": "No VERO issues"
+    }
+  },
+  "visual_prompts": {
+    "amazon": {"img1": "white background hero shot", "img2": "lifestyle gym scene"},
+    "etsy": {"img1": "handmade closeup", "img2": "gift box scene"},
+    "ebay": {"img1": "white background", "img2": "detail shot"}
+  },
+  "aplus_content": {
+    "copy01": "Premium Quality",
+    "prompt01": "premium product photography"
+  }
+}

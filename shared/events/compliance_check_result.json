@@ -1,0 +1,13 @@
+{
+  "event": "compliance_check_result",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "overall_status": "通过",
+  "fatal_count": 0,
+  "high_count": 0,
+  "medium_count": 0,
+  "details": [],
+  "report_field": "合规扫描报告",
+  "ttl_seconds": 3600
+}

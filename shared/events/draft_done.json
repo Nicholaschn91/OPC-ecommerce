@@ -1,0 +1,9 @@
+{
+  "event": "draft_done",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "platform": "",
+  "draft_field": "",
+  "ttl_seconds": 3600
+}

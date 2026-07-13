@@ -1,0 +1,11 @@
+{
+  "event": "keyword_request",
+  "version": "1.0",
+  "spu_id": "",
+  "category": "",
+  "platform": "",
+  "tier": "",
+  "sort": "conversion_rate",
+  "top": 5,
+  "ttl_seconds": 3600
+}

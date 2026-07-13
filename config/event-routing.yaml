@@ -1,0 +1,155 @@
+---
+name: event-routing
+version: 1.4.0
+description: 本地事件总线订阅规则（新增图片后处理环节）
+---
+
+# 事件路由规则
+
+## 事件定义
+events:
+  spu_fetched:
+    description: Scraper 采集完成
+    publisher: scraper
+    subscribers: [image-post-processor, keyword-grader]  # 新增：并行触发图片后处理
+    payload:
+      - spu_id
+      - feishu_record_id
+      - timestamp
+      - source_platform  # hicustom / 1688
+      - image_urls       # 原始图片 URL 列表
+      - product_name
+      - category
+      - materials
+      - key_features
+
+  images_processed:
+    description: 图片后处理完成
+    publisher: image-post-processor
+    subscribers: [router, boss]
+    payload:
+      - spu_id
+      - feishu_record_id
+      - processed_images  # 含 processed_url, base64_data, alt_text, dimensions
+      - processing_status
+
+  keyword_snapshot_ready:
+    description: 关键词库快照生成完毕
+    publisher: keyword-grader
+    subscribers: [router]
+    payload:
+      - spu_id
+      - feishu_record_id
+      - snapshot_yaml
+      - stats: {T1, T2, T3, T4, T5}
+      - build_timestamp
+
+  keyword_prepare_failed:
+    description: 无匹配词库/构建失败
+    publisher: keyword-grader
+    subscribers: [boss]
+    payload:
+      - spu_id
+      - reason: "no_matching_kw_lib / build_failed"
+
+  proposal_ready:
+    description: Router 战略提案产出（需关键词快照 + 采集数据 + 图片素材包双线就绪）
+    publisher: router
+    subscribers: [seo]
+    gate: CRITICAL_STOP
+    payload:
+      - spu_id
+      - feishu_record_id
+      - platforms
+      - track
+      - visual_handoff
+
+  draft_done:
+    description: 某平台初版文案完成
+    publisher: seo
+    subscribers: [boss]
+    gate: HUMAN_CONFIRM
+    payload:
+      - spu_id
+      - feishu_record_id
+      - platform
+      - draft_field
+
+  visual_final:
+    description: 终版+视觉 Prompt 完成（合规检测前置）
+    publisher: visual
+    subscribers: [boss]
+    payload:
+      - spu_id
+      - feishu_record_id
+      - platforms_completed
+      - visual_prompts
+      - aplus_content
+
+  compliance_check_request:
+    description: 主控分发 Dify 合规检测请求
+    publisher: boss
+    subscribers: [dify-compliance]
+    payload:
+      - spu_id
+      - feishu_record_id
+      - platforms_to_scan
+      - scan_scope: "visual_final"
+      - copy_fields
+      - visual_prompts
+      - aplus_content
+
+  compliance_check_result:
+    description: Dify 合规检测完成
+    publisher: dify-compliance
+    subscribers: [boss]
+    payload:
+      - spu_id
+      - feishu_record_id
+      - overall_status: "通过 / 需修正 / 熔断"
+      - fatal_count: 0
+      - high_count: 0
+      - medium_count: 0
+      - details: []
+      - report_field: "合规扫描报告"
+
+  risk_hit:
+    description: 合规检测命中致命级风险
+    publisher: dify-compliance
+    subscribers: [boss]
+    action: CIRCUIT_BREAK
+    payload:
+      - spu_id
+      - risk_level
+      - keyword
+      - platform_rule
+      - field_name
+
+  keyword_request:
+    description: 子 Agent 向 keyword-grader 请求取词
+    publisher: seo
+    subscribers: [keyword-grader]
+    payload:
+      - spu_id
+      - category
+      - platform
+      - tier
+      - sort
+      - top
+
+# 闸门定义
+gates:
+  CRITICAL_STOP:
+    timeout: 300s
+    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve"]
+    on_timeout: notify_user
+
+  HUMAN_CONFIRM:
+    timeout: 300s
+    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve"]
+    on_timeout: notify_user
+
+  COMPLIANCE_CONFIRM:
+    timeout: 300s
+    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve", "替换", "replace", "修正", "fix"]
+    on_timeout: notify_user

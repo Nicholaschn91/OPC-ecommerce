@@ -1,0 +1,11 @@
+{
+  "event": "risk_hit",
+  "version": "1.0",
+  "spu_id": "",
+  "risk_level": "",
+  "keyword": "",
+  "platform_rule": "",
+  "field_name": "",
+  "action": "CIRCUIT_BREAK",
+  "ttl_seconds": 3600
+}

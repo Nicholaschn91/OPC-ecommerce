@@ -1,0 +1,14 @@
+{
+  "event": "spu_fetched",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "timestamp": "",
+  "source_platform": "hicustom",
+  "image_urls": [],
+  "product_name": "",
+  "category": "",
+  "materials": [],
+  "key_features": [],
+  "ttl_seconds": 3600
+}

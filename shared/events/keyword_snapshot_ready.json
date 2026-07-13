@@ -1,0 +1,10 @@
+{
+  "event": "keyword_snapshot_ready",
+  "version": "1.0",
+  "spu_id": "",
+  "feishu_record_id": "",
+  "snapshot_yaml": "",
+  "stats": {"T1": 0, "T2": 0, "T3": 0, "T4": 0, "T5": 0},
+  "build_timestamp": "",
+  "ttl_seconds": 3600
+}
