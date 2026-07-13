@@ -201,7 +201,7 @@ resp = requests.post(
 NINEROUTER_API_KEY=9r_xxxxx
 DIFY_API_KEY=app-xxxxx
 FEISHU_APP_ID=cli_a951353ba6b8dbcf
-FEISHU_APP_SECRET=your_feishu_app_secret_here  # 替换为你的真实 Secret
+FEISHU_APP_SECRET=your_feishu_app_secret_here
 AGNES_API_KEY=sk-xxxxx
 BRIGHTDATA_API_KEY=your_brightdata_key_here
 ```
