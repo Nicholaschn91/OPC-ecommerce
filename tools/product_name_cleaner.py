@@ -267,10 +267,26 @@ def main():
                       help="全表清洗并写入「商品名称_清洗后」字段")
     parser.add_argument("--record", help="单记录 ID 测试")
     parser.add_argument("--json", action="store_true", help="JSON 格式输出")
+    parser.add_argument("--sample", type=int, default=0,
+                        help="仅分析前 N 条（快速测试）")
     args = parser.parse_args()
 
     # 默认 dry-run（除非显式 --apply）
     dry_run = not args.apply
+
+    if args.sample > 0:
+        client = FeishuClient()
+        records = client.list_all_records()[:args.sample]
+        print(f"快速采样 {len(records)} 条...")
+        for item in records:
+            rid = item["record_id"]
+            raw_name = item["fields"].get("商品名称", "")
+            cleaned, changes = clean_product_name(raw_name)
+            status = "✅" if cleaned and cleaned != raw_name.strip() else ("✓" if cleaned == raw_name.strip() else "⚠️")
+            print(f"[{status}] {rid}: {raw_name[:60]} → {cleaned[:60]}")
+            for c in changes:
+                print(f"  原因: {c}")
+        return
 
     report = run(dry_run=dry_run, record_id=args.record)
 
