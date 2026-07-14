@@ -1,7 +1,7 @@
 ---
 name: event-routing
-version: 2.0.0
-description: 本地事件总线订阅规则（Base B 父子记录结构）
+version: 2.1.0
+description: 本地事件总线订阅规则（Base B 父子记录 + 子变体结构）
 
 ---
 
@@ -13,17 +13,18 @@ events:
   spu_fetched:
     description: Scraper 采集完成
     publisher: scraper
-    subscribers: [image-post-processor, keyword-grader]  # 并行触发图片后处理
+    subscribers: [image-post-processor, keyword-grader]
     payload:
       - spu_id
-      - feishu_record_id          # Base A 记录 ID
+      - feishu_record_id
       - timestamp
-      - source_platform           # hicustom / 1688
-      - image_urls                # 原始图片 URL 列表
+      - source_platform
+      - image_urls
       - product_name
       - category
       - materials
       - key_features
+      - variant_attributes
 
   images_processed:
     description: 图片后处理完成
@@ -31,8 +32,8 @@ events:
     subscribers: [router, boss]
     payload:
       - spu_id
-      - feishu_record_id          # Base A 记录 ID
-      - processed_images          # 含 processed_url, base64_data, alt_text, dimensions
+      - feishu_record_id
+      - processed_images
       - processing_status
 
   keyword_snapshot_ready:
@@ -61,33 +62,200 @@ events:
     gate: CRITICAL_STOP
     payload:
       - spu_id
-      - feishu_record_id          # Base A 记录 ID
-      - parent_record_id          # Base B 父记录 ID（新建）
+      - feishu_record_id
+      - parent_record_id
       - platforms
       - track
       - visual_handoff
+      - variant_attribute_plan
 
   child_records_created:
-    description: SEO 创建子记录完成
+    description: SEO 创建子记录完成（每个子记录对应 2 个变体属性，包含多个变体值组合）
     publisher: seo
     subscribers: [boss]
     gate: HUMAN_CONFIRM
     payload:
       - spu_id
-      - parent_record_id          # Base B 父记录 ID
-      - child_records:            # 子记录列表
+      - parent_record_id
+      - child_records:
           - platform: amazon
-            listing_id: ""        # 子记录 ID
-            direction: "A"
-            product_name_suffix: "-A方向"
-          - platform: etsy
             listing_id: ""
-            direction: "B"
-            product_name_suffix: "-B方向"
+            direction: "A1"
+            variant_attrs: ["size", "color"]
+            product_name_suffix: "-尺寸-颜色"
+            variants:
+              - size: "尺寸1"
+                color: "颜色1"
+              - size: "尺寸1"
+                color: "颜色2"
+              - size: "尺寸2"
+                color: "颜色1"
+              - size: "尺寸2"
+                color: "颜色2"
+          - platform: amazon
+            listing_id: ""
+            direction: "A2"
+            variant_attrs: ["material", "shape"]
+            product_name_suffix: "-材质-形状"
+            variants:
+              - material: "材质1"
+                shape: "形状1"
+              - material: "材质1"
+                shape: "形状2"
+              - material: "材质2"
+                shape: "形状1"
+              - material: "材质2"
+                shape: "形状2"
+          - platform: amazon
+            listing_id: ""
+            direction: "A3"
+            variant_attrs: ["design", "pack_qty"]
+            product_name_suffix: "-设计方案-包装数量"
+            variants:
+              - design: "设计方案1"
+                pack_qty: "包装数量1"
+              - design: "设计方案1"
+                pack_qty: "包装数量2"
+              - design: "设计方案2"
+                pack_qty: "包装数量1"
+              - design: "设计方案2"
+                pack_qty: "包装数量2"
           - platform: ebay
             listing_id: ""
-            direction: "A"        # 或 B，视策略
-            product_name_suffix: "-A方向"
+            direction: "B1"
+            variant_attrs: ["size", "color"]
+            product_name_suffix: "-尺寸-颜色"
+            variants:
+              - size: "尺寸1"
+                color: "颜色1"
+              - size: "尺寸1"
+                color: "颜色2"
+              - size: "尺寸2"
+                color: "颜色1"
+              - size: "尺寸2"
+                color: "颜色2"
+          - platform: ebay
+            listing_id: ""
+            direction: "B2"
+            variant_attrs: ["material", "shape"]
+            product_name_suffix: "-材质-形状"
+            variants:
+              - material: "材质1"
+                shape: "形状1"
+              - material: "材质1"
+                shape: "形状2"
+              - material: "材质2"
+                shape: "形状1"
+              - material: "材质2"
+                shape: "形状2"
+          - platform: ebay
+            listing_id: ""
+            direction: "B3"
+            variant_attrs: ["design", "pack_qty"]
+            product_name_suffix: "-设计方案-包装数量"
+            variants:
+              - design: "设计方案1"
+                pack_qty: "包装数量1"
+              - design: "设计方案1"
+                pack_qty: "包装数量2"
+              - design: "设计方案2"
+                pack_qty: "包装数量1"
+              - design: "设计方案2"
+                pack_qty: "包装数量2"
+
+  child_records_created:
+    description: SEO 创建子记录完成（每个子记录对应 2 个变体属性，包含多个变体值组合）
+    publisher: seo
+    subscribers: [boss]
+    gate: HUMAN_CONFIRM
+    payload:
+      - spu_id
+      - parent_record_id
+      - child_records:
+          - platform: amazon
+            listing_id: ""
+            direction: "A1"
+            variant_attrs: ["size", "color"]
+            product_name_suffix: "-尺寸-颜色"
+            variants:
+              - size: "尺寸1"
+                color: "颜色1"
+              - size: "尺寸1"
+                color: "颜色2"
+              - size: "尺寸2"
+                color: "颜色1"
+              - size: "尺寸2"
+                color: "颜色2"
+          - platform: amazon
+            listing_id: ""
+            direction: "A2"
+            variant_attrs: ["material", "shape"]
+            product_name_suffix: "-材质-形状"
+            variants:
+              - material: "材质1"
+                shape: "形状1"
+              - material: "材质1"
+                shape: "形状2"
+              - material: "材质2"
+                shape: "形状1"
+              - material: "材质2"
+                shape: "形状2"
+          - platform: amazon
+            listing_id: ""
+            direction: "A3"
+            variant_attrs: ["design", "pack_qty"]
+            product_name_suffix: "-设计方案-包装数量"
+            variants:
+              - design: "设计方案1"
+                pack_qty: "包装数量1"
+              - design: "设计方案1"
+                pack_qty: "包装数量2"
+              - design: "设计方案2"
+                pack_qty: "包装数量1"
+              - design: "设计方案2"
+                pack_qty: "包装数量2"
+          - platform: ebay
+            listing_id: ""
+            direction: "B1"
+            variant_attrs: ["size", "color"]
+            product_name_suffix: "-尺寸-颜色"
+            variants:
+              - size: "尺寸1"
+                color: "颜色1"
+              - size: "尺寸1"
+                color: "颜色2"
+              - size: "尺寸2"
+                color: "颜色1"
+              - size: "尺寸2"
+                color: "颜色2"
+          - platform: ebay
+            listing_id: ""
+            direction: "B2"
+            variant_attrs: ["material", "shape"]
+            product_name_suffix: "-材质-形状"
+            variants:
+              - material: "材质1"
+                shape: "形状1"
+              - material: "材质1"
+                shape: "形状2"
+              - material: "材质2"
+                shape: "形状1"
+              - material: "材质2"
+                shape: "形状2"
+          - platform: ebay
+            listing_id: ""
+            direction: "B3"
+            variant_attrs: ["design", "pack_qty"]
+            product_name_suffix: "-设计方案-包装数量"
+            variants:
+              - design: "设计方案1"
+                pack_qty: "包装数量1"
+              - design: "设计方案1"
+                pack_qty: "包装数量2"
+              - design: "设计方案2"
+                pack_qty: "包装数量1"
+              - design: "设计方案2"
+                pack_qty: "包装数量2"
 
   draft_done:
     description: 子记录初版文案完成
@@ -97,9 +265,9 @@ events:
     payload:
       - spu_id
       - parent_record_id
-      - child_record_id           # 具体完成的子记录 ID
+      - child_record_id
       - platform
-      - direction                 # A / B
+      - direction
       - draft_field
 
   visual_final:
@@ -109,7 +277,7 @@ events:
     payload:
       - spu_id
       - parent_record_id
-      - child_record_id           # 具体完成的子记录 ID
+      - child_record_id
       - platform
       - direction
       - visual_prompts

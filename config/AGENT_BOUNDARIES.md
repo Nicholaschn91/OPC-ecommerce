@@ -11,7 +11,7 @@
 | **00_Scraper** | 仅目标商品页面 DOM/API | 仅 Base A 输入字段；**不读飞书其他、不写战略/文案** |
 | **00b_Image_PostProcessor** | `spu_fetched` 事件载荷（含图片 URL、商品基础信息） | **仅** Base A 临时字段 `图片素材包_JSON`；**不写战略/文案/终版** |
 | **01_Router** | Base A 输入字段 + keyword_tool（由 keyword-grader 代理） | 仅战略字段 / 平台分流 / 赛道选择 / VISUAL_HANDOFF |
-| **02_SEO_to_Listing** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Base B **父记录**（Product）+ **子记录**（Listing A/B）初版字段 |
+| **02_SEO_to_Listing** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Base B **父记录**（Product）+ **子记录**（Listing A/B/C...）初版字段 |
 | **03_Visual** | VisualBridge + 初版文案 | 仅 Base B **父/子记录**终版字段 + 视觉 Prompt + A+ Copy/Prompt |
 | **04_Ads** | 仅初版标题/ST/痛点 | 仅广告方案 |
 | **05_Keyword_Grader** | 仅 `keyword_database.db`（只读） | 仅主控确认后的品类/分级字段 |
@@ -100,19 +100,125 @@
 
 ---
 
-## Base B 父子记录结构（私表·Table B）
+## Base B 多层级结构（私表·Table B）
 
-| 层级 | 记录类型 | product_name 规则 | 关键字段 |
-|------|----------|-------------------|----------|
-| **父** | Product（商品主记录） | 完整商品名 | SPU_ID、Category、图片素材包_JSON、Track、父记录 ID |
-| **子 A** | Listing A（方向 A） | `{父 product_name}-A方向` | Amazon/Etsy/eBay 初版/终版字段、视觉 Prompt、A+、父记录引用 |
-| **子 B** | Listing B（方向 B） | `{父 product_name}-B方向` | Amazon/Etsy/eBay 初版/终版字段、视觉 Prompt、A+、父记录引用 |
+### 🔴 变体铁律（最高优先级）
 
-**关键约束**：
-- 父记录创建于 Router 阶段（`proposal_ready` 后）
-- 子记录创建于 SEO 阶段（`draft_done` 事件携带 `platform_listing_id`）
-- 所有文案 Agent（SEO、Visual、Ads、Compliance）**必须**在对应子记录上读写
-- 父记录只读核心属性；子记录承载平台差异化内容
+> **每个 Listing 最多 2 个变体维度。超过 2 个维度必须拆分为多个 Listing。**
+
+这是硬上限，由各平台（Amazon、eBay、Etsy）变体系统原生限制，无例外。
+
+**举例**：一个商品同时具备 6 个变体属性（尺寸、颜色、材质、形状、设计方案、包装数量），按 2 维上限，至少需拆成 **3 个 Listing**。
+
+### 层级结构（6 属性 → 3 Listing × 2 方案）
+
+```
+父记录（Product）— 完整商品名                   ← Router 阶段创建
+│
+├── 方案 A 系列
+│   ├── Listing A-尺寸-颜色                     ← SEO 阶段创建
+│   │   ├── 尺寸1-颜色1
+│   │   ├── 尺寸1-颜色2
+│   │   ├── 尺寸2-颜色1
+│   │   └── 尺寸2-颜色2
+│   │
+│   ├── Listing A-材质-形状
+│   │   ├── 材质1-形状1
+│   │   ├── 材质1-形状2
+│   │   ├── 材质2-形状1
+│   │   └── 材质2-形状2
+│   │
+│   └── Listing A-设计方案-包装数量
+│       ├── 设计方案1-包装数量1
+│       ├── 设计方案1-包装数量2
+│       ├── 设计方案2-包装数量1
+│       └── 设计方案2-包装数量2
+│
+└── 方案 B 系列
+    ├── Listing B-尺寸-颜色
+    │   ├── 尺寸1-颜色1
+    │   ├── 尺寸1-颜色2
+    │   ├── 尺寸2-颜色1
+    │   └── 尺寸2-颜色2
+    │
+    ├── Listing B-材质-形状
+    │   ├── 材质1-形状1
+    │   ├── 材质1-形状2
+    │   ├── 材质2-形状1
+    │   └── 材质2-形状2
+    └── Listing B-设计方案-包装数量
+        ├── 设计方案1-包装数量1
+        ├── 设计方案1-包装数量2
+        ├── 设计方案2-包装数量1
+        └── 设计方案2-包装数量2
+```
+
+### Listing 拆分公式
+
+```
+单个方案的 Listing 数 = ceil(变体属性总数 / 2)
+
+示例：
+  2 个属性 → 1 个 Listing
+  3 个属性 → 2 个 Listing（2+1，单属性 listing 合法但慎用）
+  4 个属性 → 2 个 Listing（2+2）
+  5 个属性 → 3 个 Listing（2+2+1）
+  6 个属性 → 3 个 Listing（2+2+2，如上图）
+```
+
+**⚠️ 单属性 Listing**：3 个属性拆成 2+1 时，那个 1 维 listing 仅含单变体属性（如仅"包装数量"），平台技术上允许但 UX 不佳。Router 需评估是否合并到已有 listing 的变体下拉中，或独立成 listing。
+
+### product_name 命名规范
+
+| 层级 | 规则 | 示例 |
+|------|------|------|
+| **父记录** | 完整商品名 | `Handcrafted Wooden Desk Organizer` |
+| **Listing 子记录** | `{父 product_name}-{方案}-{两个变体属性}` | `Handcrafted Wooden Desk Organizer-A-尺寸-颜色` |
+
+### 关键字段规则
+
+| 层级 | 记录类型 | 关键字段 | 承载内容 |
+|------|----------|----------|----------|
+| **父** | Product | SPU_ID、product_name、Category、Track、图片素材包_JSON | 核心属性、不存文案/变体 |
+| **子** | Listing | 父记录引用、方案标识(A/B)、变体属性1、变体属性2、变体维度、变体列表、Amazon/Etsy/eBay 初版/终版/视觉/A+/合规/广告 | 全部平台文案+视觉+合规+广告 |
+
+### 变体属性分配与遍历规则
+
+**Phase 2 — Router**：
+1. 从 Base A 读取 `变体维度` 字段（Scraper 解析）
+2. 计算属性总数 → ceil(总数/2) → 确定每个方案的 Listing 数量
+3. 写入 `proposal_ready` 事件载荷：方案 × Listing 矩阵
+
+**Phase 3 — SEO**：
+1. 读取 proposal 中的 Listing 分配方案
+2. **在 Base B 父记录下逐一创建子记录**，`product_name` 严格按命名规范
+3. 每个子记录写入：`变体属性1`、`变体属性2`、`变体维度`、`变体列表`
+4. **确保 `变体维度` 字段准确完整**——这是各 Agent 处理的核心依据
+
+**所有下游 Agent 在操作前必须确认 `变体维度` + `变体属性1/2` + `变体列表`，这是唯一合法上下文。**
+
+### 变体属性枚举（标准化）
+
+| 变体属性 | 标准名称 | 说明 |
+|----------|----------|------|
+| 尺寸 | Size | S/M/L/XL 或 mm/cm/inch 规格 |
+| 颜色 | Color | 标准色名/色号 |
+| 材质 | Material | 棉/聚酯/不锈钢/陶瓷等 |
+| 形状 | Shape | 圆形/方形/异形等 |
+| 设计方案 | Design | 方案 A/B/C 或 主题名称 |
+| 包装数量 | Pack Size | 1 Pcs / 2 Pcs / Set / Bundle |
+
+**⚠️ "设计方案"≠ Listing 方案 A/B**。"设计方案"是**变体属性之一**（如花纹A、花纹B），与"方案 A/B"（整体战略定位）是两个维度，不可混淆。
+
+---
+
+## 角色约束（关键误区分清）
+
+| 概念 | 含义 | 作用域 |
+|------|------|--------|
+| **方案 A / B** | SEO 整体定位方向（A=主流打法，B=差异化打法） | 决定子记录创建策略 |
+| **变体属性** | Listing 内的规格差异维度 | 每个 Listing 最多 2 个 |
+| **变体列表** | 2 个变体属性的笛卡尔积展开 | 子记录内的 SKU 矩阵 |
 
 ---
 
