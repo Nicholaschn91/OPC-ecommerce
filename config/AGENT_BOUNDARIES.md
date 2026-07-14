@@ -11,8 +11,8 @@
 | **00_Scraper** | 仅目标商品页面 DOM/API | 仅 Base A 输入字段；**不读飞书其他、不写战略/文案** |
 | **00b_Image_PostProcessor** | `spu_fetched` 事件载荷（含图片 URL、商品基础信息） | **仅** Base A 临时字段 `图片素材包_JSON`；**不写战略/文案/终版** |
 | **01_Router** | Base A 输入字段 + keyword_tool（由 keyword-grader 代理） | 仅战略字段 / 平台分流 / 赛道选择 / VISUAL_HANDOFF |
-| **02_SEO_to_Listing** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Amazon/Etsy/eBay 初版字段 |
-| **03_Visual** | VisualBridge + 初版文案 | 仅终版字段 + 视觉 Prompt + A+ Copy/Prompt |
+| **02_SEO_to_Listing** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Base B **父记录**（Product）+ **子记录**（Listing A/B）初版字段 |
+| **03_Visual** | VisualBridge + 初版文案 | 仅 Base B **父/子记录**终版字段 + 视觉 Prompt + A+ Copy/Prompt |
 | **04_Ads** | 仅初版标题/ST/痛点 | 仅广告方案 |
 | **05_Keyword_Grader** | 仅 `keyword_database.db`（只读） | 仅主控确认后的品类/分级字段 |
 | **06_Dify_Compliance** | 所有文案字段 + 视觉 Prompt + A+ 内容 | **仅** `合规扫描报告` + `合规状态` 字段；<br>二级风险经用户确认后可回写对应文案字段 |
@@ -38,15 +38,15 @@
        ↓ (产出图片素材包_JSON)
 01_Router 读取 → 生成 SPU_CONTEXT YAML
        ↓ (人工确认 CRITICAL_STOP)
-02_SEO_to_Listing 读取 SPU_CONTEXT → 生成三平台初版
+02_SEO_to_Listing 读取 SPU_CONTEXT → 生成 Base B 父记录 + 子记录初版
        ↓ (人工确认 HUMAN_CONFIRM)
-03_Visual 读取初版 + VisualBridge → 生成终版 + 视觉 Prompt + A+
+03_Visual 读取初版 + VisualBridge → 生成父/子记录终版 + 视觉 Prompt + A+
        ↓
-06_Dify_Compliance 扫描（终版文案 + 视觉 Prompt + A+）
+06_Dify_Compliance 扫描（父/子记录终版文案 + 视觉 Prompt + A+）
        ↓ (若有二级风险 → COMPLIANCE_CONFIRM 等待用户"替换")
        ↓ (若一级风险 → CIRCUIT_BREAK 全线暂停)
        ↓
-04_Ads 读取初版标题/ST/痛点 → 生成广告方案
+04_Ads 读取父/子记录初版标题/ST/痛点 → 生成广告方案
        ↓
 全案完成
 ```
@@ -67,7 +67,7 @@
 | 闸门 | 触发事件 | 等待确认 | 超时处理 |
 |------|---------|----------|----------|
 | **CRITICAL_STOP** | `proposal_ready` | Router 提案后 | 300s 无确认 → 通知用户 |
-| **HUMAN_CONFIRM** | `draft_done` | 各平台初版后 | 300s 无确认 → 通知用户 |
+| **HUMAN_CONFIRM** | `draft_done` | 父/子记录初版后 | 300s 无确认 → 通知用户 |
 | **COMPLIANCE_CONFIRM** | `compliance_check_result` (有二级风险) | Dify 扫描完成 | 300s 无确认 → 通知用户 |
 | **ETSY_STAGE** | Etsy 每阶段后 | Etsy 特有 | 300s 无确认 → 通知用户 |
 
@@ -97,6 +97,22 @@
 | **处理** | 下载 → 背景移除 → 尺寸标准化 → 视觉模型生成 ALT → 质检 → 上传 → Base64 |
 | **产出** | 写入 Base A 临时字段 `图片素材包_JSON`；发布 `images_processed` 事件 |
 | **Router 依赖** | Router 启动需等待 `images_processed` + `keyword_snapshot_ready` 双线就绪 |
+
+---
+
+## Base B 父子记录结构（私表·Table B）
+
+| 层级 | 记录类型 | product_name 规则 | 关键字段 |
+|------|----------|-------------------|----------|
+| **父** | Product（商品主记录） | 完整商品名 | SPU_ID、Category、图片素材包_JSON、Track、父记录 ID |
+| **子 A** | Listing A（方向 A） | `{父 product_name}-A方向` | Amazon/Etsy/eBay 初版/终版字段、视觉 Prompt、A+、父记录引用 |
+| **子 B** | Listing B（方向 B） | `{父 product_name}-B方向` | Amazon/Etsy/eBay 初版/终版字段、视觉 Prompt、A+、父记录引用 |
+
+**关键约束**：
+- 父记录创建于 Router 阶段（`proposal_ready` 后）
+- 子记录创建于 SEO 阶段（`draft_done` 事件携带 `platform_listing_id`）
+- 所有文案 Agent（SEO、Visual、Ads、Compliance）**必须**在对应子记录上读写
+- 父记录只读核心属性；子记录承载平台差异化内容
 
 ---
 
