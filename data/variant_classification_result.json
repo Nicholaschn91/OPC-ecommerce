@@ -1,0 +1,13 @@
+{
+  "total_need": 294,
+  "distribution": {
+    "Size": 232,
+    "": 38,
+    "Color": 18,
+    "Color, Size": 6
+  },
+  "written_ok": 561,
+  "written_fail": 0,
+  "verified_ok": 200,
+  "verified_fail": 0
+}
