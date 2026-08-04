@@ -1,6 +1,6 @@
 # SOP.md — 人工审核流程说明（最终版本）
 
-**版本**：2.0
+**版本**：3.0（与 AGENT_REGISTRY v3.0 / event-routing v3.0 对齐；Agent 编号采用 `.hermes.md` L9-20 固化名）
 **适用**：OPC 多 Agent Listing 生成全流程
 
 ---
@@ -34,8 +34,8 @@ graph TD
 
 | 线路 | Agent | 动作 | 产出 |
 |------|-------|------|------|
-| **采集线** | 00_Scraper (HiCustom + 1688) | 解析商品页 → 写入飞书 Base A 输入字段（含 `source_platform` 区分） | `spu_fetched` 事件 |
-| **关键词线** | 05_Keyword_Grader | 检查/构建 SPU 级词库 → 生成 T1-T5 分层快照 YAML | `keyword_snapshot_ready` 事件 |
+| **采集线** | 01-Scraper (HiCustom + 1688) | 解析商品页 → 写入飞书 Base A 输入字段（含 `source_platform` 区分） | `spu_fetched` 事件 |
+| **关键词线** | 02-Keyword-Grader | 检查/构建 SPU 级词库 → 生成 T1-T5 分层快照 YAML | `keyword_snapshot_ready` 事件 |
 
 > **关键点**：两线**完全并行**，互不阻塞。Router 等待**双方都就绪**后才启动。
 
@@ -43,7 +43,7 @@ graph TD
 
 ### Phase 2：Router 战略提案 + Base B 父记录创建 + 变体拆分方案（需确认 #1 — CRITICAL_STOP）
 
-- **Agent**：01_Router
+- **Agent**：03-Router
 - **前置依赖**：`spu_fetched` + `keyword_snapshot_ready` 均已收到
 - **动作**：
   1. 读取飞书 Base A 输入字段 + 关键词快照 → 生成 `SPU_CONTEXT` YAML
@@ -58,7 +58,7 @@ graph TD
 
 ### Phase 3：SEO 创建子记录 + 初版文案（需确认 #2 — HUMAN_CONFIRM）
 
-- **Agent**：02_SEO_to_Listing (单一 Agent 处理 Amazon/Etsy/eBay 三平台)
+- **Agent**：04-SEO (单一 Agent 处理 Amazon/Etsy/eBay 三平台)
 - **变体铁律**：**每个 Listing 最多 2 个变体属性**，超过即拆新 Listing
 - **动作**：
   1. 读取 `SPU_CONTEXT` + 关键词快照 → 经 keyword-grader 取词/冻结快照
@@ -76,7 +76,7 @@ graph TD
 
 ### Phase 4：终版 + 视觉 Prompt + Agnes AI 生成（无需确认，可随时干预）
 
-- **Agent**：03_Visual
+- **Agent**：05-Visual
 - **动作**：
   1. 读取各子记录初版 + VisualBridge → 生成终版标题/五点/描述到**对应子记录**
   2. 生成视觉 Prompt（Amazon/Etsy/eBay 各 Img1~7）到**对应子记录**
@@ -106,7 +106,7 @@ graph TD
 
 ### Phase 6：广告方案（可选，自动）
 
-- **Agent**：04_Ads
+- **Agent**：07-Ads
 - **动作**：读取各子记录初版标题/ST/痛点 → 生成 PPC 方案到**对应子记录**
 - **产出**：写入子记录 `Amazon_广告方案` / `Etsy_广告方案` / `eBay_广告方案` 字段
 

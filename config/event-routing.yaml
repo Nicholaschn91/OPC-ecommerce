@@ -1,9 +1,13 @@
----
-name: event-routing
-version: 2.1.0
-description: 本地事件总线订阅规则（Base B 父子记录 + 子变体结构）
-
----
+# event-routing.yaml v3.0 — 本地事件总线订阅规则（Base B 父子记录 + 子变体结构）
+# 升级说明（v2.2.0 → v3.0）：
+#   1. 9 个 v3.0 新增 Agent（10-data-analyst/11-finance/12-product-domain/13-marketing-domain/
+#      14-fulfillment-domain/15-reputation-domain/16-review-reputation/17-competitor-defense/
+#      90-asset-manager）的 publisher 已在下方事件中正式定义并标注【v3.0】。
+#   2. 增加 `domain_status` / `asset_sync_complete` 等跨域协同事件的 subscribers。
+#   3. 增加 `dual_line_ready` 合并契约（Phase 2 Router 启动的前置条件）。
+# 兼容性：所有 v2.2.0 事件 schema 保持不变；仅扩展不删除。
+#
+# 维护边界：home-hermes 主导；home-workbuddy 改动需经 GitHub 通告（见 handoff/MAINTAINERS.md）。
 
 # 事件路由规则
 
@@ -13,371 +17,710 @@ events:
   spu_fetched:
     description: Scraper 采集完成
     publisher: scraper
-    subscribers: [image-post-processor, keyword-grader]
+    subscribers:
+    - image-post-processor
+    - keyword-grader
     payload:
-      - spu_id
-      - feishu_record_id
-      - timestamp
-      - source_platform
-      - image_urls
-      - product_name
-      - category
-      - materials
-      - key_features
-      - variant_attributes
-
+    - spu_id
+    - feishu_record_id
+    - timestamp
+    - source_platform
+    - image_urls
+    - product_name
+    - category
+    - materials
+    - key_features
+    - variant_attributes
   images_processed:
     description: 图片后处理完成
     publisher: image-post-processor
-    subscribers: [router, boss]
+    subscribers:
+    - router
+    - boss
     payload:
-      - spu_id
-      - feishu_record_id
-      - processed_images
-      - processing_status
-
+    - spu_id
+    - feishu_record_id
+    - processed_images
+    - processing_status
   keyword_snapshot_ready:
     description: 关键词库快照生成完毕
     publisher: keyword-grader
-    subscribers: [router]
+    subscribers:
+    - router
     payload:
-      - spu_id
-      - feishu_record_id
-      - snapshot_yaml
-      - stats: {T1, T2, T3, T4, T5}
-      - build_timestamp
-
+    - spu_id
+    - feishu_record_id
+    - snapshot_yaml
+    - stats:
+        T1: null
+        T2: null
+        T3: null
+        T4: null
+        T5: null
+    - build_timestamp
   keyword_prepare_failed:
     description: 无匹配词库/构建失败
     publisher: keyword-grader
-    subscribers: [boss]
+    subscribers:
+    - boss
     payload:
-      - spu_id
-      - reason: "no_matching_kw_lib / build_failed"
-
-  proposal_ready:
-    description: Router 战略提案产出 + Base B 父记录创建
-    publisher: router
-    subscribers: [seo]
-    gate: CRITICAL_STOP
-    payload:
-      - spu_id
-      - feishu_record_id
-      - parent_record_id
-      - platforms
-      - track
-      - visual_handoff
-      - variant_attribute_plan
-
-  child_records_created:
-    description: SEO 创建子记录完成（每个子记录对应 2 个变体属性，包含多个变体值组合）
-    publisher: seo
-    subscribers: [boss]
-    gate: HUMAN_CONFIRM
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_records:
-          - platform: amazon
-            listing_id: ""
-            direction: "A1"
-            variant_attrs: ["size", "color"]
-            product_name_suffix: "-尺寸-颜色"
-            variants:
-              - size: "尺寸1"
-                color: "颜色1"
-              - size: "尺寸1"
-                color: "颜色2"
-              - size: "尺寸2"
-                color: "颜色1"
-              - size: "尺寸2"
-                color: "颜色2"
-          - platform: amazon
-            listing_id: ""
-            direction: "A2"
-            variant_attrs: ["material", "shape"]
-            product_name_suffix: "-材质-形状"
-            variants:
-              - material: "材质1"
-                shape: "形状1"
-              - material: "材质1"
-                shape: "形状2"
-              - material: "材质2"
-                shape: "形状1"
-              - material: "材质2"
-                shape: "形状2"
-          - platform: amazon
-            listing_id: ""
-            direction: "A3"
-            variant_attrs: ["design", "pack_qty"]
-            product_name_suffix: "-设计方案-包装数量"
-            variants:
-              - design: "设计方案1"
-                pack_qty: "包装数量1"
-              - design: "设计方案1"
-                pack_qty: "包装数量2"
-              - design: "设计方案2"
-                pack_qty: "包装数量1"
-              - design: "设计方案2"
-                pack_qty: "包装数量2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B1"
-            variant_attrs: ["size", "color"]
-            product_name_suffix: "-尺寸-颜色"
-            variants:
-              - size: "尺寸1"
-                color: "颜色1"
-              - size: "尺寸1"
-                color: "颜色2"
-              - size: "尺寸2"
-                color: "颜色1"
-              - size: "尺寸2"
-                color: "颜色2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B2"
-            variant_attrs: ["material", "shape"]
-            product_name_suffix: "-材质-形状"
-            variants:
-              - material: "材质1"
-                shape: "形状1"
-              - material: "材质1"
-                shape: "形状2"
-              - material: "材质2"
-                shape: "形状1"
-              - material: "材质2"
-                shape: "形状2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B3"
-            variant_attrs: ["design", "pack_qty"]
-            product_name_suffix: "-设计方案-包装数量"
-            variants:
-              - design: "设计方案1"
-                pack_qty: "包装数量1"
-              - design: "设计方案1"
-                pack_qty: "包装数量2"
-              - design: "设计方案2"
-                pack_qty: "包装数量1"
-              - design: "设计方案2"
-                pack_qty: "包装数量2"
-
-  child_records_created:
-    description: SEO 创建子记录完成（每个子记录对应 2 个变体属性，包含多个变体值组合）
-    publisher: seo
-    subscribers: [boss]
-    gate: HUMAN_CONFIRM
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_records:
-          - platform: amazon
-            listing_id: ""
-            direction: "A1"
-            variant_attrs: ["size", "color"]
-            product_name_suffix: "-尺寸-颜色"
-            variants:
-              - size: "尺寸1"
-                color: "颜色1"
-              - size: "尺寸1"
-                color: "颜色2"
-              - size: "尺寸2"
-                color: "颜色1"
-              - size: "尺寸2"
-                color: "颜色2"
-          - platform: amazon
-            listing_id: ""
-            direction: "A2"
-            variant_attrs: ["material", "shape"]
-            product_name_suffix: "-材质-形状"
-            variants:
-              - material: "材质1"
-                shape: "形状1"
-              - material: "材质1"
-                shape: "形状2"
-              - material: "材质2"
-                shape: "形状1"
-              - material: "材质2"
-                shape: "形状2"
-          - platform: amazon
-            listing_id: ""
-            direction: "A3"
-            variant_attrs: ["design", "pack_qty"]
-            product_name_suffix: "-设计方案-包装数量"
-            variants:
-              - design: "设计方案1"
-                pack_qty: "包装数量1"
-              - design: "设计方案1"
-                pack_qty: "包装数量2"
-              - design: "设计方案2"
-                pack_qty: "包装数量1"
-              - design: "设计方案2"
-                pack_qty: "包装数量2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B1"
-            variant_attrs: ["size", "color"]
-            product_name_suffix: "-尺寸-颜色"
-            variants:
-              - size: "尺寸1"
-                color: "颜色1"
-              - size: "尺寸1"
-                color: "颜色2"
-              - size: "尺寸2"
-                color: "颜色1"
-              - size: "尺寸2"
-                color: "颜色2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B2"
-            variant_attrs: ["material", "shape"]
-            product_name_suffix: "-材质-形状"
-            variants:
-              - material: "材质1"
-                shape: "形状1"
-              - material: "材质1"
-                shape: "形状2"
-              - material: "材质2"
-                shape: "形状1"
-              - material: "材质2"
-                shape: "形状2"
-          - platform: ebay
-            listing_id: ""
-            direction: "B3"
-            variant_attrs: ["design", "pack_qty"]
-            product_name_suffix: "-设计方案-包装数量"
-            variants:
-              - design: "设计方案1"
-                pack_qty: "包装数量1"
-              - design: "设计方案1"
-                pack_qty: "包装数量2"
-              - design: "设计方案2"
-                pack_qty: "包装数量1"
-              - design: "设计方案2"
-                pack_qty: "包装数量2"
-
-  draft_done:
-    description: 子记录初版文案完成
-    publisher: seo
-    subscribers: [boss]
-    gate: HUMAN_CONFIRM
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - draft_field
-
-  visual_final:
-    description: 终版+视觉 Prompt 完成（合规检测前置）
-    publisher: visual
-    subscribers: [boss]
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - visual_prompts
-      - aplus_content
-
-  compliance_check_request:
-    description: 主控分发 Dify 合规检测请求
-    publisher: boss
-    subscribers: [dify-compliance]
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - scan_scope: "visual_final"
-      - copy_fields
-      - visual_prompts
-      - aplus_content
-
-  compliance_check_result:
-    description: Dify 合规检测完成
-    publisher: dify-compliance
-    subscribers: [boss]
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - overall_status: "通过 / 需修正 / 熔断"
-      - fatal_count: 0
-      - high_count: 0
-      - medium_count: 0
-      - details: []
-      - report_field: "合规扫描报告"
-
-  risk_hit:
-    description: 合规检测命中致命级风险
-    publisher: dify-compliance
-    subscribers: [boss]
-    action: CIRCUIT_BREAK
-    payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - risk_level
-      - keyword
-      - platform_rule
-      - field_name
-
+    - spu_id
+    - reason: no_matching_kw_lib / build_failed
   keyword_request:
     description: 子 Agent 向 keyword-grader 请求取词
     publisher: seo
-    subscribers: [keyword-grader]
+    subscribers:
+    - keyword-grader
     payload:
-      - spu_id
-      - parent_record_id
-      - child_record_id
-      - platform
-      - direction
-      - tier
-      - sort
-      - top
-
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - tier
+    - sort
+    - top
+  keyword_response:
+    description: Keyword Grader 返回请求的关键词
+    publisher: keyword-grader
+    subscribers:
+    - seo
+    - ads
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - tier
+    - words: []
+    - stats
+  proposal_ready:
+    description: Router 战略提案产出 + Base B 父记录创建
+    publisher: router
+    subscribers:
+    - seo
+    gate: CRITICAL_STOP
+    payload:
+    - spu_id
+    - feishu_record_id
+    - parent_record_id
+    - platforms
+    - track
+    - visual_handoff
+    - variant_attribute_plan
+  child_records_created:
+    description: SEO 创建子记录完成（每个子记录对应 2 个变体属性，包含多个变体值组合）
+    publisher: seo
+    subscribers:
+    - boss
+    gate: HUMAN_CONFIRM
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_records:
+      - platform: amazon
+        listing_id: ''
+        direction: A1
+        variant_attrs:
+        - size
+        - color
+        product_name_suffix: -尺寸-颜色
+        variants:
+        - size: 尺寸1
+          color: 颜色1
+        - size: 尺寸1
+          color: 颜色2
+        - size: 尺寸2
+          color: 颜色1
+        - size: 尺寸2
+          color: 颜色2
+      - platform: amazon
+        listing_id: ''
+        direction: A2
+        variant_attrs:
+        - material
+        - shape
+        product_name_suffix: -材质-形状
+        variants:
+        - material: 材质1
+          shape: 形状1
+        - material: 材质1
+          shape: 形状2
+        - material: 材质2
+          shape: 形状1
+        - material: 材质2
+          shape: 形状2
+      - platform: amazon
+        listing_id: ''
+        direction: A3
+        variant_attrs:
+        - design
+        - pack_qty
+        product_name_suffix: -设计方案-包装数量
+        variants:
+        - design: 设计方案1
+          pack_qty: 包装数量1
+        - design: 设计方案1
+          pack_qty: 包装数量2
+        - design: 设计方案2
+          pack_qty: 包装数量1
+        - design: 设计方案2
+          pack_qty: 包装数量2
+      - platform: ebay
+        listing_id: ''
+        direction: B1
+        variant_attrs:
+        - size
+        - color
+        product_name_suffix: -尺寸-颜色
+        variants:
+        - size: 尺寸1
+          color: 颜色1
+        - size: 尺寸1
+          color: 颜色2
+        - size: 尺寸2
+          color: 颜色1
+        - size: 尺寸2
+          color: 颜色2
+      - platform: ebay
+        listing_id: ''
+        direction: B2
+        variant_attrs:
+        - material
+        - shape
+        product_name_suffix: -材质-形状
+        variants:
+        - material: 材质1
+          shape: 形状1
+        - material: 材质1
+          shape: 形状2
+        - material: 材质2
+          shape: 形状1
+        - material: 材质2
+          shape: 形状2
+      - platform: ebay
+        listing_id: ''
+        direction: B3
+        variant_attrs:
+        - design
+        - pack_qty
+        product_name_suffix: -设计方案-包装数量
+        variants:
+        - design: 设计方案1
+          pack_qty: 包装数量1
+        - design: 设计方案1
+          pack_qty: 包装数量2
+        - design: 设计方案2
+          pack_qty: 包装数量1
+        - design: 设计方案2
+          pack_qty: 包装数量2
+  draft_done:
+    description: 子记录初版文案完成（按平台聚合触发 HUMAN_CONFIRM）
+    publisher: seo
+    subscribers:
+    - boss
+    gate: HUMAN_CONFIRM
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - draft_field
+  etsy_stage:
+    description: Etsy 每阶段完成后额外的人工闸门（SEO 触发）
+    publisher: seo
+    subscribers:
+    - boss
+    gate: ETSY_STAGE
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - stage: 初版/终版/视觉
+    - draft_field
+  visual_final:
+    description: 终版+视觉 Prompt 完成（合规检测前置）
+    publisher: visual
+    subscribers:
+    - boss
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - visual_prompts
+    - aplus_content
+  compliance_check_request:
+    description: 主控分发 Dify 合规检测请求（Boss 组装 copy_fields 后发送）
+    publisher: boss
+    subscribers:
+    - dify-compliance
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - scan_scope: visual_final
+    - copy_fields
+    - visual_prompts
+    - aplus_content
+  compliance_check_result:
+    description: Dify 合规检测完成
+    publisher: dify-compliance
+    subscribers:
+    - boss
+    - ads
+    - cs
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - overall_status: 通过 / 需修正 / 熔断 / ERROR / QUOTA_EXCEEDED
+    - fatal_count: 0
+    - high_count: 0
+    - medium_count: 0
+    - details: []
+    - report_field: 合规扫描报告
+  risk_hit:
+    description: 合规检测命中致命级风险
+    publisher: dify-compliance
+    subscribers:
+    - boss
+    action: CIRCUIT_BREAK
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - risk_level
+    - keyword
+    - platform_rule
+    - field_name
+  ad_campaign_ready:
+    description: 广告方案生成完成
+    publisher: ads
+    subscribers:
+    - boss
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - budget_summary
   cs_ticket_created:
     description: 客服工单创建
     publisher: cs
-    subscribers: [boss]
+    subscribers:
+    - boss
     payload:
-      - ticket_id
-      - platform
-      - order_id
-      - issue_type
-      - priority
-
+    - ticket_id
+    - platform
+    - order_id
+    - issue_type
+    - priority
   cs_ticket_resolved:
     description: 客服工单解决
     publisher: cs
-    subscribers: [boss]
+    subscribers:
+    - boss
     payload:
-      - ticket_id
-      - resolution
-      - satisfaction_score
-
-# 闸门定义
+    - ticket_id
+    - resolution
+    - satisfaction_score
+  market_analysis_report:
+    description: 数据分析Agent 的市场分析报告
+    publisher: data-analyst
+    subscribers:
+    - boss
+    - product-domain
+    payload:
+    - spu_id
+    - market_volume
+    - monopoly_degree
+    - profit_margin_estimate
+    - recommendation: 进入 / 观望 / 放弃
+  sku_health_report:
+    description: 数据分析Agent 的每周SKU健康度诊断
+    publisher: data-analyst
+    subscribers:
+    - boss
+    - product-domain
+    - finance
+    payload:
+    - report_date
+    - skus:
+      - spu_id
+      - return_rate
+      - conversion_rate
+      - profit_ranking
+      - health_status: 健康 / 关注 / 警告 / 危险
+  data_insight:
+    description: 数据分析Agent 的实时数据洞察
+    publisher: data-analyst
+    subscribers:
+    - boss
+    payload:
+    - insight_type: anomaly / trend / opportunity
+    - description
+    - affected_spus
+  profit_model:
+    description: 财务Agent 的预估毛利模型
+    publisher: finance
+    subscribers:
+    - boss
+    - product-domain
+    payload:
+    - spu_id
+    - estimated_cost_breakdown:
+        采购: null
+        头程: null
+        FBA费: null
+        关税: null
+        佣金: null
+    - estimated_margin
+    - break_even_price
+    - recommendation: 可行 / 微利 / 不可行
+  profit_alert:
+    description: 财务Agent 的TACoS超标/SKU亏损预警
+    publisher: finance
+    subscribers:
+    - boss
+    - marketing-domain
+    payload:
+    - spu_id
+    - alert_type: tacos_exceeded / sku_loss
+    - current_tacos
+    - daily_loss
+    - recommended_action: 优化广告 / 暂停广告 / 调整价格
+  sku_profit_report:
+    description: 财务Agent 的每周SKU利润排行榜
+    publisher: finance
+    subscribers:
+    - boss
+    payload:
+    - report_date
+    - skus:
+      - spu_id
+      - net_profit
+      - profit_margin_pct
+      - tacos
+      - ranking
+  budget_review:
+    description: 财务Agent 的广告预算审核
+    publisher: finance
+    subscribers:
+    - boss
+    - marketing-domain
+    payload:
+    - campaign_id
+    - requested_budget
+    - estimated_tacos_impact
+    - verdict: 批准 / 削减 / 否决
+  listing_published:
+    description: 商品域总监的上架完成通知
+    publisher: product-domain
+    subscribers:
+    - boss
+    - asset-manager
+    - marketing-domain
+    payload:
+    - spu_id
+    - parent_record_id
+    - platforms_published
+    - asset_archive_path
+  domain_status:
+    description: 各域总监的领域状态汇报
+    publisher: product-domain / marketing-domain / fulfillment-domain / reputation-domain
+    subscribers:
+    - boss
+    payload:
+    - domain: product / marketing / fulfillment / reputation
+    - active_tasks
+    - agent_statuses
+    - blocking_issues
+  campaign_launched:
+    description: 营销域总监的广告上线通知
+    publisher: marketing-domain
+    subscribers:
+    - boss
+    - data-analyst
+    - finance
+    payload:
+    - spu_id
+    - campaign_id
+    - daily_budget
+    - target_acos
+  pricing_adjusted:
+    description: 价格调整记录（营销域/竞品防御）
+    publisher: marketing-domain / competitor-defense
+    subscribers:
+    - boss
+    - finance
+    payload:
+    - spu_id
+    - old_price
+    - new_price
+    - reason: 竞品降价 / 库存周转 / 广告ACOS / 跟卖驱赶
+  order_dispatched:
+    description: 履约域总监的订单发货通知
+    publisher: fulfillment-domain
+    subscribers:
+    - boss
+    - asset-manager
+    payload:
+    - order_id
+    - warehouse
+    - carrier
+    - tracking_number
+    - estimated_delivery
+  order_delayed:
+    description: 履约域总监的物流延迟广播（跨域协同核心 — 不经过Boss）
+    publisher: fulfillment-domain
+    subscribers:
+    - cs
+    - marketing-domain
+    - data-analyst
+    payload:
+    - order_id
+    - tracking_number
+    - delay_duration_hours
+    - carrier
+    - route
+    - suggested_action: 安抚邮件 / 优惠券 / 无操作(SLA内)
+  order_delivered:
+    description: 履约域总监的签收确认 → 触发索评
+    publisher: fulfillment-domain
+    subscribers:
+    - cs
+    - reputation-domain
+    payload:
+    - order_id
+    - delivery_date
+    - trigger_review_request: true
+  logistics_anomaly_report:
+    description: 履约域总监的物流商异常率报告
+    publisher: fulfillment-domain
+    subscribers:
+    - data-analyst
+    payload:
+    - carrier
+    - route
+    - anomaly_rate
+    - period
+  review_insight:
+    description: 声誉域的好评卖点/差评缺陷（跨域反哺）
+    publisher: reputation-domain / review-reputation
+    subscribers:
+    - product-domain
+    - marketing-domain
+    payload:
+    - asin
+    - sentiment: positive / negative
+    - extracted_terms: []
+    - review_count_sample
+  rating_alert:
+    description: 声誉域总监的星级预警
+    publisher: reputation-domain
+    subscribers:
+    - boss
+    - product-domain
+    payload:
+    - asin
+    - current_rating
+    - rating_trend
+    - threshold_breached: true
+  review_analysis:
+    description: 评论声誉Agent 的情感分析报告
+    publisher: review-reputation
+    subscribers:
+    - reputation-domain
+    payload:
+    - asin
+    - total_reviews_analyzed
+    - sentiment_breakdown:
+        positive: null
+        neutral: null
+        negative: null
+    - defect_tags: []
+    - selling_point_tags: []
+  competitor_review_insight:
+    description: 评论声誉Agent 的竞品弱点提取
+    publisher: review-reputation
+    subscribers:
+    - marketing-domain
+    payload:
+    - competitor_asin
+    - weakness_tags: []
+  pricing_update:
+    description: 竞品防御Agent 的价格调整记录
+    publisher: competitor-defense
+    subscribers:
+    - boss
+    - marketing-domain
+    - finance
+    payload:
+    - spu_id
+    - old_price
+    - new_price
+    - reason
+  buy_box_alert:
+    description: 竞品防御Agent 的跟卖警报
+    publisher: competitor-defense
+    subscribers:
+    - boss
+    - marketing-domain
+    payload:
+    - asin
+    - hijacker_seller_id
+    - hijacker_price
+    - buy_box_lost: true
+  price_war_alert:
+    description: 竞品防御Agent 的价格战熔断
+    publisher: competitor-defense
+    subscribers:
+    - boss
+    payload:
+    - asin
+    - floor_price
+    - competitor_price
+    - recommended_action: 放弃价格战 / 启用差异化
+  asset_sync_complete:
+    description: 本地资产Agent 的飞书同步完成
+    publisher: asset-manager
+    subscribers:
+    - boss
+    payload:
+    - sync_type: full / incremental
+    - tables_synced
+    - conflicts_resolved
+  compliance_block:
+    description: 合规风控Agent选品/物流阶段熔断（资质/清关/危险品缺失）
+    publisher: dify-compliance
+    subscribers:
+    - boss
+    action: CIRCUIT_BREAK
+    payload:
+    - spu_id
+    - block_stage
+    - block_reason
+    - detail
+  shipment_ready:
+    description: Router发货前通知（触发合规物流卡点）
+    publisher: router
+    subscribers:
+    - dify-compliance
+    payload:
+    - spu_id
+    - order_id
+    - destination_country
+    - hs_code
+    - product_category
+    - is_dangerous_goods
+    - carrier
+  ad_compliance_check:
+    description: Ads广告素材合规审核（触发合规广告卡点）
+    publisher: ads
+    subscribers:
+    - dify-compliance
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_record_id
+    - platform
+    - direction
+    - ad_copy
+    - ad_images
+  ad_compliance_result:
+    description: 合规风控Agent的广告审核结果
+    publisher: dify-compliance
+    subscribers:
+    - boss
+    - ads
+    payload:
+    - spu_id
+    - overall_status
+    - violations
+    - suggestions
+  dual_line_ready:
+    description: "Router 启动前置条件：图片后处理 + 关键词快照 双线就绪合并事件（消除 SOP.md 与 event-routing 启动条件不一致的 P1-5 问题）。由 boss 监听 images_processed + keyword_snapshot_ready 后组装发布。"
+    publisher: boss
+    subscribers:
+    - router
+    payload:
+    - spu_id
+    - feishu_record_id
+    - images_status
+    - keyword_snapshot_id
+    - merged_at
+  listing_completed:
+    description: "Phase 7 全案完成汇总事件（listing_published + ad_campaign_ready 都到位；消除 SOP.md 与 event-routing 缺完成事件的 P2-9 问题）。"
+    publisher: boss
+    subscribers:
+    - asset-manager
+    - data-analyst
+    - finance
+    - reputation-domain
+    payload:
+    - spu_id
+    - parent_record_id
+    - child_records_completed
+    - platforms_published
+    - ad_campaigns_launched
+    - completed_at
 gates:
   CRITICAL_STOP:
     timeout: 300s
-    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve"]
+    allowed_confirmations:
+    - 确认
+    - 继续
+    - 通过
+    - OK
+    - ok
+    - confirm
+    - approve
     on_timeout: notify_user
-
   HUMAN_CONFIRM:
     timeout: 300s
-    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve"]
+    allowed_confirmations:
+    - 确认
+    - 继续
+    - 通过
+    - OK
+    - ok
+    - confirm
+    - approve
     on_timeout: notify_user
-
   COMPLIANCE_CONFIRM:
     timeout: 300s
-    allowed_confirmations: ["确认", "继续", "通过", "OK", "ok", "confirm", "approve", "替换", "replace", "修正", "fix"]
+    allowed_confirmations:
+    - 确认
+    - 继续
+    - 通过
+    - OK
+    - ok
+    - confirm
+    - approve
+    - 替换
+    - replace
+    - 修正
+    - fix
+    on_timeout: notify_user
+  ETSY_STAGE:
+    timeout: 300s
+    allowed_confirmations:
+    - 确认
+    - 继续
+    - 通过
+    - OK
+    - ok
+    - confirm
+    - approve
     on_timeout: notify_user

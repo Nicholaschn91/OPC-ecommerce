@@ -1,56 +1,105 @@
-# OPC Multi-Agent System — Agent Registry
+# OPC Multi-Agent System — Agent Registry v3.0
 
-> 所有 Agent 的统一注册表。每个 Agent 的职责边界、输入输出、依赖关系在此定义。
+> 四层架构全景图。所有 Agent 的统一注册表。
 > 更新此文件时，同步更新对应 Agent 的 AGENT.md。
 
-## Agent 列表
+---
 
-| # | Agent | 编号 | 职责 | 输入 | 输出 | 依赖 |
-|---|-------|------|------|------|------|------|
-| 1 | Boss | 00 | 主控 Orchestrator | 全局事件 | 路由决策、人工闸门 | 所有 Agent |
-| 2 | Scraper | 01 | 数据采集（HiCustom + 1688） | 商品链接 | `spu_fetched` 事件 | Boss |
-| 3 | Keyword Grader | 02 | 关键词分级与冻结快照 | 品类数据 | `keyword_snapshot_ready` | Boss, Scraper |
-| 4 | Router | 03 | 战略提案 + 变体判定 | `spu_fetched` + 关键词快照 | `proposal_ready` 事件 | Boss, Scraper, Keyword Grader |
-| 5 | SEO | 04 | 初版 Listing 文案生成 | `proposal_ready` | `draft_done` 事件 | Router |
-| 6 | Visual | 05 | 终版 Listing + 视觉 Prompt + A+ | `draft_done` | `visual_final` 事件 | SEO |
-| 7 | Dify Compliance | 06 | 合规检测（三层扫描） | `visual_final` | `compliance_check_result` | Visual |
-| 8 | Ads | 07 | 广告方案生成 | `compliance_check_result` | 广告文案 + 预算建议 | Dify Compliance |
-| 9 | CS | 08 | 客服话术生成 | 产品信息 | FAQ + 客服脚本 | Visual |
-| 10 | Image Post-Processor | 09 | 图像处理（URL→Base64、去背、缩放、上传） | 视觉 Prompt | 已上传的图片 URL | Visual |
-
-## 数据流
+## 架构概览
 
 ```
-Scraper ──spu_fetched─────────────┐
-Keyword Grader ──keyword_snapshot_ready ──┐
-                                           ▼
-                                    Router ──proposal_ready──┐
-                                                               ▼
-                                          SEO ──draft_done────────────┐
-                                                                  ▼
-                                         Visual ──visual_final──────────┐
-                                                                 ▼
-                                Dify Compliance ──compliance_check_result──┐
-                                                                        ▼
-                                               Ads ──ad_campaign_data
-                                               CS ──customer_service_scripts
-                                               Image Post-Processor ──image_urls
+[人类老板] 设定目标
+      │
+      ▼
+[L0] 🧠 00-Boss (Orchestrator / CEO)
+      │ 战略拆解 · 任务分发 · 异常熔断 · 人工闸门
+      │
+      ├──────────────┬──────────────┐
+      ▼              ▼              │
+[L1] 📊 10-数据分析   💰 11-财务利润  │
+      (CDO)          (CFO)         │
+      洞察·归因·预测   成本·利润·风控   │
+      │              │              │
+      ▼              ▼              ▼
+[L2] 📦 12-商品域    📢 13-营销域   🚚 14-履约域   🛡️ 15-声誉域
+      │              │              │              │
+[L3] 01-Scraper     07-Ads         03-Router(物流) 16-评论声誉
+      02-Keyword     17-竞品防御    08-CS(售后)     
+      03-Router(战略)
+      04-SEO
+      05-Visual
+      06-Dify
+      09-Image-PP
+      │              │              │              │
+      └──────────────┴──────────────┴──────────────┘
+                        │
+                        ▼
+             [底座] 🗄️ 90-本地资产Agent
+             (PIM/WMS/DAM/锁管理器)
 ```
 
-## 职责边界（飞书字段写权限）
+---
 
-| Agent | 可读字段 | 可写字段 | 禁止写入 |
-|-------|----------|----------|----------|
-| Boss | 所有 | 事件总线 | 无 |
-| Scraper | 目标页面 | 输入字段（颜色/尺码/价格等） | 策略/文案/视觉 |
-| Keyword Grader | keyword_database.db | category/tier/keyword_snapshot | 商品数据/文案 |
-| Router | 输入字段 + 关键词快照 | strategy/platform/track/VISUAL_HANDOFF | 初版文案/视觉 |
-| SEO | SPU_CONTEXT YAML + 关键词快照 | Amazon/Etsy/eBay 初版字段 | 视觉/A+/ST |
-| Visual | VisualBridge + 初版文案 | 终版字段 + 视觉 Prompt + A+ | ST/合规字段 |
-| Dify Compliance | 所有终版字段 | 合规扫描报告 + 合规状态 | 文案/视觉 |
-| Ads | 初版 title/ST/pain points | 广告活动字段 | 初版文案/视觉 |
-| CS | 产品信息 + 终版文案 | 客服话术字段 | 产品数据/视觉 |
-| Image Post-Processor | 视觉 Prompt | 图片 URL 字段 | 文案/合规 |
+## Agent 完整列表
+
+| # | Agent | 层级 | 归属域 | 核心职责 |
+|---|-------|------|--------|----------|
+| 00 | **Boss** | L0 决策 | — | 主控 Orchestrator：意图识别、事件路由、人工闸门、超时监控、异常熔断 |
+| 10 | **数据分析** | L1 中枢 | — | CDO：市场分析、转化分析、SKU健康度、物流异常率、全局仪表盘 |
+| 11 | **财务利润** | L1 中枢 | — | CFO：毛利模型、TACoS预警、SKU利润排行、预算审核、汇率对冲 |
+| 12 | **商品域总监** | L2 领域 | 📦 商品域 | 选品→上架全链路调度、Listing质量把控、合规前置、素材归档 |
+| 13 | **营销域总监** | L2 领域 | 📢 营销域 | 广告调度、预算风控、竞品防御、动态定价协同、主动营销触发 |
+| 14 | **履约域总监** | L2 领域 | 🚚 履约域 | 物流路由、库存扣减、轨迹监控、异常跨域协同、签收索评 |
+| 15 | **声誉域总监** | L2 领域 | 🛡️ 声誉域 | 全网Review监控、差评诊断→商品域、好评反哺→营销域、星级预警 |
+| 01 | **Scraper** | L3 执行 | 📦 商品域 | 数据采集（HiCustom + 1688）、双源并行、spu_fetched事件 |
+| 02 | **Keyword Grader** | L3 执行 | 📦 商品域 | 关键词分级T1-T5、冻结快照、语义层分析、keyword_request响应 |
+| 03 | **Router** | L3 执行 | 📦+🚚 跨域 | 战略提案（A/B方案+变体判定）+ 物流路由（最优发货选择） |
+| 04 | **SEO** | L3 执行 | 📦 商品域 | 初版Listing文案（Amazon/Etsy/eBay）、关键词嵌入、子记录创建 |
+| 05 | **Visual** | L3 执行 | 📦 商品域 | 终版Listing + 视觉Prompt (Img1~7) + A+内容 (01~10)、变体感知 |
+| 06 | **Dify Compliance** | L3 执行 | 📦 商品域 | 三层合规扫描（L1熔断/L2替换/L3静默）、Dify优先 |
+| 07 | **Ads** | L3 执行 | 📢 营销域 | 广告方案、关键词投放、预算建议、A/B测试方案 |
+| 08 | **CS** | L3 执行 | 🚚+🛡️ 跨域 | 客服话术（FAQ/售前/售中/售后）、cs_ticket事件 |
+| 09 | **Image Post-Processor** | L3 执行 | 📦 商品域 | 图片下载→去背→标准化→ALT→上传→Base64、图片素材包_JSON |
+| 16 | **评论与声誉** | L3 执行 | 🛡️ 声誉域 | 全网Review监控、情感分析、缺陷/卖点词提取、竞品评论对比 |
+| 17 | **竞品防御定价** | L3 执行 | 📢 营销域 | 跟卖监控、竞品价格采集、动态定价、Coupon策略、价格战熔断 |
+| 90 | **本地资产管理** | 底座 | — | PIM/WMS/DAM、分布式锁、版本控制、飞书同步、唯一真理源 |
+
+---
+
+## 数据流 (v3.0)
+
+```
+Scraper(01) ──spu_fetched──┐
+                            ├──► Image-Post-Processor(09) ──images_processed──┐
+                            └──► Keyword-Grader(02) ──keyword_snapshot_ready──┤
+                                                                              ▼
+                                                                     Router(03) ──proposal_ready──┐
+                                                                     (等双线就绪)                    │
+                                                                                                   ▼
+                                                                                          SEO(04) ──child_records_created──┐
+                                                                                          [HUMAN_CONFIRM]                │
+                                                                                                                        ▼
+                                                                                                               Visual(05) ──visual_final──┐
+                                                                                                                                    │
+                                                                                                                    Dify-Compliance(06) ──compliance_check_result──┐
+                                                                                                                    [COMPLIANCE_CONFIRM]                         │
+                                                                                                                                                                    ▼
+                                                                                                                            Ads(07) ──ad_campaign_ready
+                                                                                                                            CS(08) ──cs_ticket_*
+                                                        
+数据分析(10) ←── 订阅所有Agent事件流 ──► 财务利润(11)
+  │                                          │
+  └────────── 为L2域总监提供洞察 ──────────────┘
+
+履约域(14) ──order_delayed──► 营销域(13) 自动触发安抚邮件
+                           ──► 客服(08) 预生成话术
+                           ──► 数据分析(10) 记录异常率
+
+声誉域(15) ──差评诊断──► 商品域(12) SEO/Visual优化
+           ──好评卖点──► 营销域(13) 广告关键词反哺
+```
+
+---
 
 ## 人工闸门
 
@@ -60,17 +109,27 @@ Keyword Grader ──keyword_snapshot_ready ──┐
 | HUMAN_CONFIRM | 各平台初版产出 | 同上 | 300s |
 | COMPLIANCE_CONFIRM | Dify L2 风险 | "替换"/"replace"/"修正"/"fix" + 确认 | 300s |
 | CIRCUIT_BREAK | Dify L1 风险 | 自动熔断，需人工介入 | 无限 |
+| ETSY_STAGE | Etsy 每阶段后 | "确认"/"继续" | 300s |
 
-## 铁律
+---
 
-1. **三振出局** — 任何任务连续失败 3 次 → 立即中断、输出错误详情、等待人工介入
+## 铁律（全系统）
+
+1. **三振出局** — 任何任务连续失败 3 次 → 立即中断、通知 Boss
 2. **合规熔断** — 触碰法律/平台红线立即中止
 3. **只读边界** — shared/databases/ 对子 Agent 只读
 4. **变体铁律** — 每个 Listing 最多 2 个变体维度
 5. **越权清除** — 任何跨边界写入 → Boss 拦截 → 清除脏数据 → 重跑
+6. **利润红线** — TACoS < 15%，财务Agent 失血即报警
+7. **真理源唯一** — 所有数据写入通过本地资产Agent(90)，不可直连飞书
+8. **锁必释放** — 并发写入必须走 90 的分布式锁，30s TTL
+
+---
 
 ## 版本历史
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
-| 2026-07-15 | v1.0 | 初始注册表，10 个 Agent |
+| 2026-07-15 | v1.0 | 初始注册表，10 Agent 扁平架构 |
+| 2026-07-16 | v2.0 | 编号统一、边界文档修正、event-routing v2.2 |
+| 2026-07-17 | v3.0 | 四层架构重构：+7 Agent（10-17+90）、域总监体系、双轨通信、底座层

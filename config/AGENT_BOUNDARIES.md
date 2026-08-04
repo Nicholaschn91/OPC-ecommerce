@@ -1,5 +1,6 @@
 # AGENT_BOUNDARIES.md — 核心边界定义（飞书字段权限矩阵）
 
+**版本**：v3.0（与 AGENT_REGISTRY v3.0 对齐；补全 11 个 v3.0 Agent 字段权限）
 **全局铁律**：越权即被主控拦截、清除脏数据、重跑。
 
 ---
@@ -8,15 +9,24 @@
 
 | Agent | 读权限边界 | 写权限边界（飞书字段级） |
 |-------|-----------|------------------------|
-| **00_Scraper** | 仅目标商品页面 DOM/API | 仅 Base A 输入字段；**不读飞书其他、不写战略/文案** |
-| **00b_Image_PostProcessor** | `spu_fetched` 事件载荷（含图片 URL、商品基础信息） | **仅** Base A 临时字段 `图片素材包_JSON`；**不写战略/文案/终版** |
-| **01_Router** | Base A 输入字段 + keyword_tool（由 keyword-grader 代理） | 仅战略字段 / 平台分流 / 赛道选择 / VISUAL_HANDOFF |
-| **02_SEO_to_Listing** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Base B **父记录**（Product）+ **子记录**（Listing A/B/C...）初版字段 |
-| **03_Visual** | VisualBridge + 初版文案 | 仅 Base B **父/子记录**终版字段 + 视觉 Prompt + A+ Copy/Prompt |
-| **04_Ads** | 仅初版标题/ST/痛点 | 仅广告方案 |
-| **05_Keyword_Grader** | 仅 `keyword_database.db`（只读） | 仅主控确认后的品类/分级字段 |
-| **06_Dify_Compliance** | 所有文案字段 + 视觉 Prompt + A+ 内容 | **仅** `合规扫描报告` + `合规状态` 字段；<br>二级风险经用户确认后可回写对应文案字段 |
-| **07_Customer_Service** | 订单/产品/物流/退换货 相关字段 | 仅客服记录字段；不写入 Listing 字段 |
+| **01_Scraper** | 仅目标商品页面 DOM/API | 仅 Base A 输入字段；**不读飞书其他、不写战略/文案** |
+| **09_Image_PostProcessor** | `spu_fetched` 事件载荷（含图片 URL、商品基础信息） | **仅** Base A 临时字段 `图片素材包_JSON`；**不写战略/文案/终版** |
+| **03_Router** | Base A 输入字段 + keyword_tool（由 keyword-grader 代理） | 仅战略字段 / 平台分流 / 赛道选择 / VISUAL_HANDOFF |
+| **04_SEO** | 仅 `SPU_CONTEXT` YAML + 平台专属 skill 包 | 仅 Base B **父记录**（Product）+ **子记录**（Listing A/B/C...）初版字段 |
+| **05_Visual** | VisualBridge + 初版文案 | 仅 Base B **父记录**终版文案 + **子记录**终版字段 + 视觉 Prompt + A+ Copy/Prompt；父记录视觉 Prompt/A+ 由 Visual 汇总子记录后写入 |
+| **07_Ads** | 仅初版标题/ST/痛点 | 仅广告方案 |
+| **02_Keyword_Grader** | 仅 `keyword_database.db`（只读） | 仅主控确认后的品类/分级字段 |
+| **06_Dify_Compliance** | 所有文案字段 + 视觉 Prompt + A+ 内容 + 广告素材 + 物流数据 + 选品数据 | **仅** `合规扫描报告` + `合规状态` + 熔断标记字段；<br>**一票否决权**：选品/上架/广告/物流四卡点任一命中致命风险 → 直接 CIRCUIT_BREAK；<br>L2 风险经用户确认后**由 Boss 写回**对应文案字段（Dify 不直接写回） |
+| **08_Customer_Service** | 订单/产品/物流/退换货 相关字段 | 仅客服记录字段；不写入 Listing 字段 |
+| **10_DataAnalyst** (L1 中枢) | 所有 Agent 公开事件数据 + 飞书报表字段（只读聚合） | 仅数据分析报告字段、仪表盘数据；不修改任何业务数据 |
+| **11_Finance** (L1 中枢) | 采购成本 / 物流账单 / 广告消耗 / 平台费用 / 汇率（只读聚合） | 仅利润报表字段、预警字段；不修改价格/预算/库存 |
+| **12_ProductDomain** (L2 域总监) | Base A 输入 + 7 个下属 Agent 状态 + L1 报告 | 仅商品域状态字段 + 调度指令；不直接写文案（由下属 04-SEO/05-Visual 执行） |
+| **13_MarketingDomain** (L2 域总监) | 转化报告 / TACoS 数据 / 物流延迟事件 / 好评卖点（只读聚合） | 仅营销域状态字段 + 调度指令；不直接操作广告后台（由下属 07-Ads 执行） |
+| **14_FulfillmentDomain** (L2 域总监) | 订单数据 / 物流商 API / 仓库库存 | 仅履约状态字段 + 调度指令；不直接改库存（由底座 90-asset-manager 执行） |
+| **15_ReputationDomain** (L2 域总监) | Review/Feedback 数据 + 16-ReviewReputation 报告 + 签收事件 | 仅声誉域状态字段 + 调度指令；不直接改 Listing（由 12-ProductDomain 执行） |
+| **16_ReviewReputation** (L3) | Review/Feedback API 数据 + 17-CompetitorDefense 提供的竞品 ASIN | 仅评论分析报告字段；不直连商品域/营销域（必须经 15-ReputationDomain 转发） |
+| **17_CompetitorDefense** (L3) | 竞品价格 / 库存周转率 / 广告 ACOS / 成本底价 / Buy Box | 仅价格调整字段；不直接改 Listing（由 12-ProductDomain 执行），不跌破 11-Finance 核算底价 |
+| **90_AssetManager** (底座) | 所有 Agent 的数据写入请求 + 飞书 Base A/B 初始数据 | 所有商品/库存/素材/文案数据（读写）+ 提供锁服务；不执行业务逻辑 |
 
 ---
 
