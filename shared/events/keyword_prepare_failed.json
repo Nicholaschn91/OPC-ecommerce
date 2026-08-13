@@ -1,7 +1,0 @@
-{
-  "event": "keyword_prepare_failed",
-  "version": "1.0",
-  "spu_id": "",
-  "reason": "no_matching_kw_lib",
-  "ttl_seconds": 3600
-}

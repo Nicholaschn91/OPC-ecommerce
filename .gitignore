@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+env/
+.venv/
+
+# Hermes
+.hermes/
+.hermes.md
+*.hermes.md
+
+# WorkBuddy
+.workbuddy/
+*.workbuddymemory/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Secrets
+.env
+references/config.json
+
+# Node
+node_modules/
+package-lock.json
