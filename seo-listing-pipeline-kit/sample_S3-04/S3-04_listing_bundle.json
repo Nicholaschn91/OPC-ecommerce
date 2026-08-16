@@ -1,0 +1,125 @@
+{
+  "spu": "S3-04",
+  "product_truth": {
+    "name": "定制名字帆布托特包",
+    "category": "服饰配件",
+    "material": "帆布包袋"
+  },
+  "keyword_plan": {
+    "source_platform": "amazon",
+    "T4": [
+      "personalise tote",
+      "party bags",
+      "shopping totes"
+    ],
+    "T3": [
+      "printed cotton bag",
+      "labrador tote",
+      "Bridal Shower Favors",
+      "Tote Bags Bridesmaid",
+      "Boat Tote"
+    ],
+    "T2": [
+      "Bridesmaid Proposal",
+      "Personalize Tote Bag",
+      "book bag tote",
+      "teachers tote bag"
+    ],
+    "T1": [
+      "varsity tote bag",
+      "baby tote bag",
+      "Bags With Dog Face",
+      "Tote bag Initial",
+      "wholesale tote bag",
+      "woven bridesmaid bag"
+    ],
+    "intent": {
+      "T4": [
+        {
+          "kw": "personalise tote",
+          "intent": "transactional"
+        },
+        {
+          "kw": "party bags",
+          "intent": "informational"
+        },
+        {
+          "kw": "shopping totes",
+          "intent": "informational"
+        }
+      ],
+      "T3": [
+        {
+          "kw": "printed cotton bag",
+          "intent": "informational"
+        },
+        {
+          "kw": "labrador tote",
+          "intent": "informational"
+        },
+        {
+          "kw": "Bridal Shower Favors",
+          "intent": "informational"
+        },
+        {
+          "kw": "Tote Bags Bridesmaid",
+          "intent": "informational"
+        },
+        {
+          "kw": "Boat Tote",
+          "intent": "informational"
+        }
+      ],
+      "T2": [
+        {
+          "kw": "Bridesmaid Proposal",
+          "intent": "informational"
+        },
+        {
+          "kw": "Personalize Tote Bag",
+          "intent": "informational"
+        },
+        {
+          "kw": "book bag tote",
+          "intent": "informational"
+        },
+        {
+          "kw": "teachers tote bag",
+          "intent": "informational"
+        }
+      ],
+      "T1": [
+        {
+          "kw": "varsity tote bag",
+          "intent": "informational"
+        },
+        {
+          "kw": "baby tote bag",
+          "intent": "informational"
+        },
+        {
+          "kw": "Bags With Dog Face",
+          "intent": "informational"
+        },
+        {
+          "kw": "Tote bag Initial",
+          "intent": "informational"
+        },
+        {
+          "kw": "wholesale tote bag",
+          "intent": "informational"
+        },
+        {
+          "kw": "woven bridesmaid bag",
+          "intent": "informational"
+        }
+      ]
+    }
+  },
+  "visual_tone": null,
+  "generated_platforms": [
+    "etsy"
+  ],
+  "created_at": "2026-08-16T16:27:13.056795+00:00",
+  "updated_at": "2026-08-16T16:27:13.056802+00:00"
+}
