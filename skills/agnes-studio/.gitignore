@@ -1,0 +1,6 @@
+# Secrets / runtime state — never commit
+.env
+scripts/.feishu_token.json
+scripts/.agnes_video_usage.json
+__pycache__/
+*.pyc
