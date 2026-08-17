@@ -3,18 +3,18 @@ name: qwen-listing-optimizer
 description: "[阶段1·文案+视觉方案·千问Qwen3.8-Max·线一/线二] 真实驱动千问网页端 Qwen3.8-Max 执行 Listing 终版优化（标题/Description/Tags/承诺审批区 + 视觉 Prompt×7）。线一(新上架全量)默认开视觉；线二(在售迭代)默认小改、视觉需用户主动开。触发词：跑终版/优化 listing/批量优化/生成标题描述视觉/新 listing 上架/在售 listing 优化；路线专用触发词：线一全量 / 线二小改 / 仅文案 / 开视觉 / 重做视觉（命中则直接解析线别+模式，无需点选；未命中任何路线触发词则执行前强制 Step 0 点选）。每条 listing 独立新建对话窗口。需中国大陆出口 IP。终版不接关键词词库（词库由 listing-v1-seo-builder 初版消费）。"
 ---
 
-> ⚠️ **版本声明（2026-08-10 MCP 化修订）**：本 skill 原执行层为**手搓 Playwright**（`scripts/optimize-one.js` 等自起 Chromium）。用户于 2026-08-08 立「浏览器控制铁律：只认 MCP、禁手搓 Playwright」，故已**废除手搓脚本**（归档于 `scripts/_deprecated_handrolled_playwright/`），执行层全面改为 **`playwright-qwen` MCP 驱动**。端到端已于 2026-08-10 在国内 IP 环境实测跑通（详见「验证状态」）。
+> ⚠️ **版本声明（2026-08-10 MCP 化修订）**：本 skill 原执行层为**手搓 Playwright**（`scripts/optimize-one.js` 等自起 Chromium）。用户于 2026-08-08 立「浏览器控制铁律：只认 MCP、禁手搓 Playwright」，故已**废除手搓脚本**（归档于 `scripts/_deprecated_handrolled_playwright/`），执行层全面改为 **`browser-qwen` MCP 驱动**。端到端已于 2026-08-10 在国内 IP 环境实测跑通（详见「验证状态」）。
 
 > 📦 **v2 融合声明（2026-08-17）**：本版 = office-workbuddy 已落地增强（模型铁律·禁止降级 / Step 0 路线等级强制点选 / Step 1.5 严禁代码点新建对话 / Step 6.5 截断根因更正 / `switch-qwen38max.js` 确定性切模型 / `mcp.json` 加 `--headed` / `clean-capture.py` 锚记路径 + `strip_echo_markers`）**＋** home-workbuddy 验证过的独有架构（人工交接双路径 `assemble_handoff` 落点 / 防蚕食账本贯通 `build-inject --spu` + `verify-ledger` / 两层滤网软层兜底 / Stage 4 写飞书逐条授权），三方无损合并。v1 基线（home 验证版）不动；本目录为融合产物。
 
-# 千问 Listing 优化器（playwright-qwen MCP 真实执行）
+# 千问 Listing 优化器（browser-qwen MCP 真实执行）
 
 ## 核心约定（铁律）
 - **真实执行，非模拟**：必须真正驱动千问网页端里的 Qwen3.8-Max 模型本人生成内容，**绝不由本机套用提示词替模型生成**（用户明确不认可"模拟"方式）。
 - **模型铁律（禁止降级）**：本 skill 强制使用 **Qwen3.8-Max 或更高**（如后续有 Qwen3.9 / 4.x-Max 亦可用）。**严禁**使用 `Qwen3.7-千问` / `Qwen3.7-Max` / `Qwen3.6-Flash` 等任何低版本——低版本输出质量不满足 Listing 终版要求，且曾实测因此产出错误 deliverable（100163 首跑误跑在 Qwen3.7-千问，已作废重跑）。Agent 必须在注入前 **DOM-核验徽标含 `Qwen3.8-Max`**，降级一律拒绝执行。
 - **每条独立窗口（零污染）**：每优化一个 listing 都新建一个对话窗口，跑完即结束，绝不在同一窗口连续跑多个。无关商品类目、无关全量/文案模式。
 - **前置判断**：全量优化才输出 Step4 视觉 Prompt×7；非全量（仅标题 / 仅 Description / 局部调整）跳过视觉。
-- **浏览器只认 MCP**：所有网页端操作（导航/点击/填表/截图/抓取/注入）**唯一合法手段是 `playwright-qwen` MCP**，严禁任何 `*.js` 自起 Chromium（见 `scripts/_deprecated_handrolled_playwright/README.md`）。
+- **浏览器只认 MCP**：所有网页端操作（导航/点击/填表/截图/抓取/注入）**唯一合法手段是 `browser-qwen` MCP**，严禁任何 `*.js` 自起 Chromium（见 `scripts/_deprecated_handrolled_playwright/README.md`）。
 
 ## 三维路由定位（本 skill）
 > 全链路由「线别 × 模式 × 工具」三个维度决定调用哪个 skill。本 skill 只负责**阶段 1**。
@@ -48,7 +48,7 @@ description: "[阶段1·文案+视觉方案·千问Qwen3.8-Max·线一/线二] �
 | 工具 | 千问 Qwen3.8-Max |
 
 ## 人工交接区（human-in-the-loop 手动路径落点）
-> 半自动流程里，终版优化有一环是「人拿提示词去 Qwen3.8-Max **网页端**跑、再把输出贴回」（区别于 `build-inject.py` 经 `playwright-qwen` MCP 的自动注入路径）。这一步的产物**必须有固定落点**，不能每次临时找文件、手动拼装。
+> 半自动流程里，终版优化有一环是「人拿提示词去 Qwen3.8-Max **网页端**跑、再把输出贴回」（区别于 `build-inject.py` 经 `browser-qwen` MCP 的自动注入路径）。这一步的产物**必须有固定落点**，不能每次临时找文件、手动拼装。
 
 **固定落点 = `_e2e_out/<spu>/`**，由 `scripts/assemble_handoff.py` 一键生成「开箱即用」交接包（在 workspace 根目录执行）：
 
@@ -68,7 +68,7 @@ python scripts/assemble_handoff.py --spu S3-04
 
 人工跑完贴回 `clean.md` 后，agent 用 `scripts/verify-ledger.py` 跑闸门（防蚕食唯一性 + 三级熔断 + 字段回读 + 软层 review），无 `MELTDOWN`/`CRITICAL_STOP` 再进 Stage 4 写飞书（逐条授权）。
 
-> 自动路径（`playwright-qwen` MCP 注入）不走本目录，由 `build-inject.py` 产出 `.js` 片段；两条路径**共用同一套装配顺序 + 防蚕食账本约束 + 软层自检清单**，仅落点不同。
+> 自动路径（`browser-qwen` MCP 注入）不走本目录，由 `build-inject.py` 产出 `.js` 片段；两条路径**共用同一套装配顺序 + 防蚕食账本约束 + 软层自检清单**，仅落点不同。
 
 ## 两条线框架（终版 / 优化，2026-08-04 划定）
 > 收到优化任务**先确权属哪条线**，再决定能否接词库 + 改动幅度上限。**硬规则（2026-08-15）**：未命中路线触发词时，必须执行 **Step 0 强制点选**（`AskUserQuestion` 弹路线 + 视觉开关），**绝不允许默认按线一大改**，也不允许"先跑后问"。
@@ -90,7 +90,7 @@ python scripts/assemble_handoff.py --spu S3-04
 - **Description 视觉化**：断行 + emoji 增强情绪与视觉效果，避免大段纯文字。
 
 ## 环境要求（MCP 化）
-- **`playwright-qwen` MCP 已连接且为「有头」模式**（连接器管理处启用；`mcp.json` playwright-qwen 条目 `args` 须加 `--headed`）。登录态复用 `PLAYWRIGHT_MCP_CDP_PROFILE` 环境变量指向的 `cdp-profile-h` 个人资料（本机 = `C:/Users/nicho/.workbuddy/chrome-profiles/cdp-profile-h`，已在 mcp.json 配好）。无头实例须重启连接器切换为有头，否则 Step 6「有头实时观测」无法落地。
+- **`browser-qwen` MCP 已连接且为「有头」模式**（连接器管理处启用；`mcp.json` browser-qwen 条目 `args` 须加 `--headed`）。登录态复用 `PLAYWRIGHT_MCP_CDP_PROFILE` 环境变量指向的 `cdp-profile-h` 个人资料（本机 = `C:/Users/nicho/.workbuddy/chrome-profiles/cdp-profile-h`，已在 mcp.json 配好）。无头实例须重启连接器切换为有头，否则 Step 6「有头实时观测」无法落地。
 - 登录态：profile 内已登录千问账号（实测 `Qwen1122`）。cookie 过期则经 MCP 浏览器手动登录一次，会话持久化于 profile。
 - **中国大陆出口 IP**：qianwen.com 在非大陆地区返回"Qwen 在你所在的地区不可用"，须在国内网络下运行。此限制与"真实店铺一店一IP 代理机制"无关。
 - 正确域名：**`qianwen.com`**（无 `www`；`www.qianwen.com` DNS 失败）；**不是 `qwen.com`**（qwen.com 是 Qwen 模型官网，完全不同）。
@@ -121,8 +121,8 @@ python scripts/assemble_handoff.py --spu S3-04
    ```
    - 纯文件处理（Node，无浏览器），保留 alt 与 images 1:1。
 
-## 执行流程（playwright-qwen MCP 驱动，逐步）
-> 以下 `browser_*` 均为 `playwright-qwen` MCP 工具。每个 listing 都从**新建对话**开始——**「新建对话」必须由人工点击按钮完成（见 Step 1.5），严禁用代码脚本自动点击**。
+## 执行流程（browser-qwen MCP 驱动，逐步）
+> 以下 `browser_*` 均为 `browser-qwen` MCP 工具。每个 listing 都从**新建对话**开始——**「新建对话」必须由人工点击按钮完成（见 Step 1.5），严禁用代码脚本自动点击**。
 
 0. **路线/等级前置点选（强制）**：扫描用户指令是否命中「路线/等级专用触发词」（见上表）。
    - 命中 → 直接解析 `--line` / `--mode`，跳过本步。
@@ -189,7 +189,7 @@ python scripts/assemble_handoff.py --spu S3-04
 - **`browser_run_code_unsafe` 的 Node 侧无 fs/require/fetch**：片段内不能写文件、不能读文件、不能 `fetch` 本地服务（且 qianwen.com 是 HTTPS，会拦截向 HTTP 子资源的混合内容请求）。故大文本**只能 base64 内联进 code 参数**，抓取**只能 Blob 下载 + `download` 事件捕获**。
 - **DOM 访问必须进 `page.evaluate`**：`document` 不在 Node 侧作用域。
 - **大载荷绕过上下文**：>13K 字符用 `build-inject.py` 产 base64 内联片段，agent 读文件全文作 `code` 参数（已验证 27K+ base64 可用）。
-- **MCP 文件根限制（2026-08-15 实测）**：`browser_run_code_unsafe` 的 `filename` 参数仅允许落在 MCP 允许根目录（如 `C:\Users\...\ .workbuddy\logs\mcp-runtime\custom-mcp_playwright-qwen-*\`），工作区/桌面路径会报 `File access denied`。`build-inject.py` 产出的 `_inject_snippet.js` 需先 `cp` 进允许根目录再传 `filename`，或直接把文件全文作为 `code` 参数内联。
+- **MCP 文件根限制（2026-08-15 实测）**：`browser_run_code_unsafe` 的 `filename` 参数仅允许落在 MCP 允许根目录（如 `C:\Users\...\ .workbuddy\logs\mcp-runtime\custom-mcp_browser-qwen-*\`），工作区/桌面路径会报 `File access denied`。`build-inject.py` 产出的 `_inject_snippet.js` 需先 `cp` 进允许根目录再传 `filename`，或直接把文件全文作为 `code` 参数内联。
 - **每条 listing 独立新建对话窗口**：避免历史消息污染下一条。
 - **域名**：`qianwen.com`（无 www）；非 `qwen.com`。
 

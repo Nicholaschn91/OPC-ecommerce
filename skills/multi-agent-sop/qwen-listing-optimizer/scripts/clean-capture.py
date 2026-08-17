@@ -3,7 +3,7 @@
 """
 clean-capture.py — 把「Blob 下载捕获的原始 md」清洗为可交付版本。
 
-原始捕获（经 playwright-qwen MCP 的 download 事件落盘）含：
+原始捕获（经 browser-qwen MCP 的 download 事件落盘）含：
   顶部页面 chrome + 深度思考块 + 正式输出 + 底部输入框 chrome。
 
 清洗规则（2026-08-15 修订 · 兼容线一/线二输出）：

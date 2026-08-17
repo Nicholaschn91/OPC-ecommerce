@@ -13,7 +13,7 @@ assemble_handoff.py — 人工交接区（human-in-the-loop 手动路径）产�
     listing_bundle.json # 拷贝 Stage1 产物，供参考
     <spu>_etsy_v1.md    # 拷贝初版草稿，供参考
 
-手工路径与自动路径（build-inject.py 产 .js 片段经 playwright-qwen 注入）共用同一套
+手工路径与自动路径（build-inject.py 产 .js 片段经 browser-qwen 注入）共用同一套
 装配顺序 + 防蚕食账本约束 + 软层自检清单；本脚本只负责把「人要跑的那一份」落到固定位置。
 
 用法（在 workspace 根目录执行）：
@@ -149,7 +149,7 @@ def main():
         "## 参考物料\n"
         "- `listing_bundle.json`：Stage1 产物（词策略蓝图）。\n"
         f"- `{args.spu}_etsy_v1.md`：初版草稿（若存在）。\n"
-        "- 自动路径（playwright-qwen 注入）不走本目录，由 build-inject.py 产出 .js 片段。\n"
+        "- 自动路径（browser-qwen 注入）不走本目录，由 build-inject.py 产出 .js 片段。\n"
     )
     with open(handoff_path, "w", encoding="utf-8") as f:
         f.write(handoff)

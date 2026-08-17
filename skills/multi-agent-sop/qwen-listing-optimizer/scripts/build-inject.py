@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 build-inject.py — 组装「千问 Qwen3.8-Max 终版优化」注入载荷，
-产出可直接作为 playwright-qwen MCP `browser_run_code_unsafe` 的 `code` 参数的 .js 片段。
+产出可直接作为 browser-qwen MCP `browser_run_code_unsafe` 的 `code` 参数的 .js 片段。
 
 为什么需要它：
   - 提示词 + 数据常 > 13K 字符，无法塞进对话上下文逐字输入；
