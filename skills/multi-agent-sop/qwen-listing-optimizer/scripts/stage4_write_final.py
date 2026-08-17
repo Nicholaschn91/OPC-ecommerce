@@ -23,7 +23,7 @@ import argparse
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MULTI = os.path.dirname(os.path.dirname(SCRIPT_DIR))  # .../multi-agent-sop
-BRIDGE = os.path.join(MULTI, "aistudio-visualbridge", "scripts")
+BRIDGE = os.path.join(MULTI, "aistudio-image-bridge", "scripts")
 sys.path.insert(0, BRIDGE)
 import feishu_products_io as F
 

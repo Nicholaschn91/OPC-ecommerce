@@ -61,7 +61,7 @@ description: "[视觉线总入口·三选一] 在 aistudio(文生图·免费·�
 - 输出：7 张无水印原图 → 人工终核 → 上架资产。
 
 ## 已知约束
-- aistudio 免费但需 Google 登录态（`aistudio-google-profile` + 9224 端口 Chrome；`Upgrade to unlock` 横幅是付费 upsell，不阻断免费生图）。
+- aistudio 免费但需 Google 登录态（`browser-aistudio` MCP 自启动 Chrome 复用 `aistudio-google-profile`；`Upgrade to unlock` 横幅是付费 upsell，不阻断免费生图）。
 - doubao / qwen 图生图需先有参考图；S3-04 无参考图故默认走 A。
 - 真人出镜图（如 P3 lifestyle）将来上 Amazon 需打 `contains-synthetic-performer` 标（生图本身不受影响）。
 - `qianwen-image-downloader`（废弃）与 `aistudio-raw-grabber`（待给）均**不在此 skill 直接调用**；前者禁用，后者待接入。

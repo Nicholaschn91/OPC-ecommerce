@@ -10,7 +10,7 @@ description: >
 
 ⚠️ 锁定声明（已审定）：本 skill 为 v5.4 已审定版本。Agent 仅可读取并按步骤执行，禁止修改本文件及 scripts/ 下任何内容；执行时须严格遵循步骤顺序，不得省略或跳过任何步骤。如需变更，须先与用户确认。
 
-从飞书「商品基础信息」生成「设计方案」（text），下游由 `aistudio-visualbridge` 消费生成设计图。
+从飞书「商品基础信息」生成「设计方案」（text），下游由 `aistudio-image-bridge` 消费生成设计图。
 本 skill 仅含 **千问通道**（Qwen3.8-Max，browser-qwen MCP 驱动）。AI Studio 回退通道见 `aistudio-design-plan`。
 
 ## 依赖脚本（`scripts/`）
@@ -124,14 +124,14 @@ cd <skill>/scripts
 "$PY" dp_write_feishu.py <record_id> <MCP根目录>/_raw_inner.txt
 
 # 回读验证（必做）
-cd ../../aistudio-visualbridge/scripts
+cd ../../aistudio-image-bridge/scripts
 "$PY" feishu_products_io.py show <record_id>
 ```
 > `dp_write_feishu.py` 内部 `load_raw_text()` 负责传输层解码（还原 MCP JSON 双重转义），**不做内容级清洗**——v5.4 纯净输出协议保证正文可直接写入。
 
 ## 5. 交棒下游
 
-「设计方案」写入后，由 `aistudio-visualbridge` 接手：解析 Prompt 组 → Nano Banana 2 Lite 生图 → 回写「设计方案图片」附件字段。
+「设计方案」写入后，由 `aistudio-image-bridge` 接手：解析 Prompt 组 → Nano Banana 2 Lite 生图 → 回写「设计方案图片」附件字段。
 
 ## 失败恢复速查
 

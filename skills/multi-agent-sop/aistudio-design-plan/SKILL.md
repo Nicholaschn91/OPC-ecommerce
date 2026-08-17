@@ -40,7 +40,7 @@
 
 | 项 | 状态 |
 |---|---|
-| 用户的 Chrome 跑在 9224 调试端口（与 `browser-aistudio` 同浏览器） | ✅ `chrome --remote-debugging-port=9224` |
+| `browser-aistudio` MCP 已配置**自启动**（自动拉起 Chrome 并复用 `aistudio-google-profile` 登录态，无需手动开浏览器） | ✅ |
 | `browser-aistudio` MCP 已连接 | ✅（你已 Trust） |
 | AI Studio 已登录 `leiyuzhe007@gmail.com` | ✅ |
 | 浏览器已**最大化** | ✅（脚本会通过 CDP `Browser.setWindowBounds` 强制最大化）|
@@ -53,7 +53,7 @@ NODE="C:/Users/nicho/.workbuddy/binaries/node/versions/22.22.2/node.exe"
 PY="C:/Users/nicho/.workbuddy/binaries/python/versions/3.13.12/python.exe"
 SKILL="C:/Users/nicho/.workbuddy/skills/multi-agent-sop/aistudio-design-plan"
 SCRIPTS="$SKILL/scripts"
-VBIO="C:/Users/nicho/.workbuddy/skills/multi-agent-sop/aistudio-visualbridge/scripts/feishu_products_io.py"
+VBIO="C:/Users/nicho/.workbuddy/skills/multi-agent-sop/aistudio-image-bridge/scripts/feishu_products_io.py"
 ```
 
 ## 6. 执行步骤（照抄）

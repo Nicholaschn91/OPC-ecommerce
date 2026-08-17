@@ -226,7 +226,7 @@ python scripts/write_image_attachment.py <record_id> ./<record_id>_*.png
 - 结论：免费模型 + Rerun 恢复 = 稳定可用，闭环成立
 
 ### 2026-08-14 13:00 复测通过（MCP 驱动全链路，本次上锁依据）
-- 环境：`browser-aistudio` MCP 连接器（端口 9224，复用 `aistudio-google-profile`，登录账号 `leiyuzhe007@gmail.com`）
+- 环境：`browser-aistudio` MCP 连接器（**自启动** Chrome，复用 `aistudio-google-profile` 登录态，登录账号 `leiyuzhe007@gmail.com`）
 - 流程：navigate（URL 带 `?model=gemini-3.1-flash-lite-image`）→ 清弹窗 → 切 **Images only** → evaluate 填英文 prompt（橙色虎斑猫+蓝围巾贴纸）→ 点 Run
 - **首轮直接出图，未报 internal error，无需 Rerun**（比 08-11 更顺，确认该账号/该 profile 下 MCP 自动驱动不被 Google 服务端拦截）
 - 产物：`Generated Image August 14, 2026 - 1_00PM.png`，**1408×768，1.35MB**（已落 `C:\Users\nicho\Downloads\` 并复制到工作区核对，真图为证）
