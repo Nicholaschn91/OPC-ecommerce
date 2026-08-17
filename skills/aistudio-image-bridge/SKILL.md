@@ -247,6 +247,40 @@ python scripts/write_image_attachment.py <record_id> ./<record_id>_<label>.png
 > ⚠️ 附件字段每次 PUT 会**整体替换**，必须一次性传入该记录的所有图片。
 > ⚠️ 飞书凭证须在 `references/config.json` 中自备（见 `.gitignore`，不入库）。
 
+## Path 1：CDP 抓无水印原图（2026-08-18 实测可用）
+
+**背景**：aistudio 网页下载 / DOM `<img>` src 都是**带水印的显示版**（实际是 `data:image/png;base64,...`，约 1-2MB，SHA 与 DOM 一致）。真正的**干净原图**是生成后页面内部 `blob:https://aistudio.google.com/...` 的 `image/*` 响应，格式通常是 **JPEG**，体积更小（约 300-700KB）。
+
+脚本：`scripts/path1_clean_grab.py`
+
+**前置**（必须用真实 Chrome，不能是 Playwright MCP 拉起）：
+```powershell
+"C:\Program Files\Google\Chrome\Application\chrome.exe" `
+  --remote-debugging-port=9333 `
+  --remote-allow-origins=* `
+  --user-data-dir="C:\Users\nicho\.workbuddy\chrome-profiles\aistudio-headed-profile" `
+  --proxy-server="http://127.0.0.1:7897"
+```
+
+**运行**：
+```bash
+python scripts/path1_clean_grab.py --prompt-file prompt.txt --out ./out
+```
+
+**脚本做的事**：
+1. 连 9333，找到/新建 aistudio 标签页；
+2. 启用 `Network` 域，从点击 **Run** 开始拦截所有 `image/*` 响应；
+3. 在**同一标签页**里完成 Images only → 填 prompt（自动剥离 `--ar`）→ Run → 检测 internal error → 点报错 turn 的 Rerun → 校验出图 → 点 Download；
+4. 把捕获到的 `image/*` 字节按 URL 落盘；
+5. 同时抓 DOM `<img>` 做 SHA 对比，确认哪个是干净原图。
+
+**识别干净原图**：
+- `blob:https://aistudio.google.com/...` → **JPEG，300-700KB → 干净原图**；
+- `https://www.gstatic.com/aistudio/watermark/watermark_v4.png` → 水印叠加图层本身（1.5KB，忽略）；
+- `data:image/png;base64,...` → 带水印的显示版（1-2MB，SHA 与 DOM `<img>` 一致）。
+
+**注意**：该脚本不依赖 `browser-aistudio` MCP，而是直接走 CDP WebSocket；它只负责生图+抓干净字节，飞书回写仍用 `scripts/write_image_attachment.py`。
+
 ## 图生图（img2img）轮次
 
 在 **Images only** 模式下：
