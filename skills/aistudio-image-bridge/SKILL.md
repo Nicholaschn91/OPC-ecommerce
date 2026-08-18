@@ -318,6 +318,45 @@ python scripts/bria_rmbg_cutout.py --image-url clean.jpg --mode pod_print --matt
 - 端点：`POST /remove_background`（body 同 Tool Definition：`image_url, mode, keep_shadow, matting_strength, out?`）、`GET /health`。
 - 注意：`bria_rmbg_server.py` 与 `bria_rmbg_cutout.py` 必须**同目录**，server 启动时会 `import bria_rmbg_cutout` 并 `warmup()` 预加载模型到缓存。
 
+**批量抠图**（`scripts/bria_batch_cutout.py`，v1.1 新增）：一次性扫描 `path1_out/*/` 各方向子目录的首张 `network_0_*.jpg`，逐个跑 `remove_background` 生成 `*_bria.png` + `*_bria_meta.json`，并可选 `--summary` 汇总。
+```bash
+D:/anaconda/python.exe scripts/bria_batch_cutout.py --base path1_out --mode pod_print
+# gated 仓库必需：--hf-token hf_xxx 或 设 env HF_TOKEN
+```
+
+### 模型路由与质检设计（transparent-background 未来集成参考 · 用户 2026-08-18 拍板）
+
+> 当前阶段**只跑通 BRIA-RMBG-2.0**（首选）。`transparent-background` 作为**备选/兜底**，待需求上升再由用户显式安排接入。下方路由与质检规格为未来集成时的设计基线，先固化以免丢失。
+
+**① mode → 模型路由（首选 / 备选）**
+
+| 你的需求 | 首选 | 备选 |
+| :--- | :--- | :--- |
+| POD 印花 / 徽章 / 图形 | BRIA-RMBG-2.0 | transparent-background（仅当图形含大量半透明叠层时） |
+| 通用商品主体 | BRIA-RMBG-2.0 | transparent-background（玻璃 / 珠宝 / 液体） |
+| 人像 / 发丝 / 自然场景 | transparent-background | BRIA-RMBG-2.0 |
+
+**② 商品类型 → 推荐模型**
+
+| 商品类型 | 推荐模型 | 原因 |
+| :--- | :--- | :--- |
+| 服装 / 鞋包 / 3C 数码 | BRIA-RMBG-2.0 | 边缘干净利落，保留吊牌/拉链/屏幕内容，适合白底图/换背景 |
+| 玻璃器皿 / 液体 / 珠宝 | transparent-background | 对折射、透光、高光的语义理解更深，matting 更自然 |
+| 毛绒玩具 / 纺织品 | 两者接近，BRIA 略优 | BRIA 对纤维边缘处理更稳定 |
+| 食品 / 生鲜 | BRIA-RMBG-2.0 | 训练集中食品样本丰富，色彩保真度更好 |
+| 复杂背景 + 细小部件 | transparent-background | 多尺度注意力对密集细节（如首饰链条）更鲁棒 |
+
+**③ 关键质检项 + 阈值参考（落进 `_qc` 时要覆盖的维度）**
+
+| 场景 | 关键质检项 | 阈值参考 | 失败原因诊断 |
+| :--- | :--- | :--- | :--- |
+| POD 印花 | Alpha 通道非零像素占比 vs 原图前景占比 | 偏差 >15% | 图形被过度裁剪或背景残留 |
+| POD 印花 | 边缘像素平均 Alpha 梯度 | <0.3 | 边缘过于生硬（缺抗锯齿） |
+| 商品主体 | 掩码连通域数量 | >3 | 主体被切碎，或背景碎片未清除 |
+| 商品主体 | 边界框内前景填充率 | <60% 或 >98% | 主体缺失 / 背景大面积误留 |
+
+> 当前 `bria_rmbg_cutout.py` 的 `_qc()` 已实现「前景占比 + 边缘一致性」二维打分（阈值 0.6）；上表 ③ 的「连通域数量 / 边界框填充率 / 半透明叠层偏差」为 transparent-background 接入时须补齐的增强质检项。
+
 ### Agent 配置（复制到 Agent 系统提示词 / 工具列表）
 
 以下两段为 Agent 侧配置，确保 Agent「正确调用工具」；抠图效果由上方后端代码保证。

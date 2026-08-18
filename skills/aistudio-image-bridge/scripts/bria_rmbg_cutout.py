@@ -17,8 +17,12 @@ alpha 蒙版 → 透明 PNG。
   # ⚠️ briaai/RMBG-2.0 是 GATED 仓库：首次运行前必须先 HUGGINGFACE 鉴权，否则 401
   #   1) 浏览器打开 https://huggingface.co/briaai/RMBG-2.0 点「Agree」接受许可
   #   2) huggingface-cli login  （或设环境变量 HF_TOKEN=你的 read token）
-  # ⚠️ numpy 体系必须与 torch 一致：若 anaconda 自带 numpy1.x 与用户站 numpy2.x 冲突，
-  #   把 scikit-learn/pandas/pyarrow 也 --user 重装到用户站（同 numpy2 ABI）。
+  # ⚠️ numpy 体系必须与 torch 一致（D:/anaconda/python.exe 的踩坑清单，2026-08-18 实测）：
+  #   anaconda 自带 numpy1.x 编译的 scipy/sklearn/pandas/pyarrow/numexpr/bottleneck 会与
+  #   用户站 numpy2.x(torch/transformers 所在) ABI 冲突 → 全部 --user 重装到用户站：
+  #     D:/anaconda/python.exe -m pip install --user --force-reinstall --no-deps ^
+  #       scikit-learn pandas pyarrow scipy numexpr bottleneck kornia narwhals
+  #   （bottleneck/numexpr 为 pandas 可选依赖，缺了只告警不崩；其余为硬依赖必须修）
   # 国内网络：首次运行前设 HF_ENDPOINT=https://hf-mirror.com 加速（注意镜像可能未同步该 gated 权重）
 
 CLI（契约对齐 Agent Tool Definition）：
@@ -98,15 +102,17 @@ def _preprocess(image_url):
 # ---- 模型加载（单例缓存，供重试复用）--------------------------------------
 _MODEL_CACHE = {}
 
-def _load_model(model_id, device):
+def _load_model(model_id, device, token=None):
     import torch
     from transformers import AutoModelForImageSegmentation
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     key = (model_id, device)
     if key not in _MODEL_CACHE:
+        if token is None:
+            token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
         m = AutoModelForImageSegmentation.from_pretrained(
-            model_id, trust_remote_code=True
+            model_id, trust_remote_code=True, token=token
         )
         try:
             torch.set_float32_matmul_precision("high")
@@ -198,7 +204,8 @@ def warmup(model_id=None, device=None):
 
 # ---- 主接口 ----------------------------------------------------------------
 def remove_background(image_url, mode="pod_print", keep_shadow=None,
-                      matting_strength=None, out=None, device=None, meta_out=None):
+                      matting_strength=None, out=None, device=None, meta_out=None,
+                      token=None):
     if mode not in VALID_MODES:
         raise ValueError(f"mode 必须是 {VALID_MODES} 之一，收到: {mode!r}")
     preset = MODE_PRESETS[mode]
@@ -213,7 +220,7 @@ def remove_background(image_url, mode="pod_print", keep_shadow=None,
     import numpy as np
 
     im, dpi, raw_w, raw_h = _preprocess(image_url)
-    model, device = _load_model(preset["model"], device)
+    model, device = _load_model(preset["model"], device, token=token)
 
     warning = None
     last_quality = None
