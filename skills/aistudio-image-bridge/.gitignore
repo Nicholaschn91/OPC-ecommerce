@@ -1,1 +1,11 @@
-	K���r����r�M�ӭ}ӎtӶ塽[�
+# 本地凭据：含飞书 APP_SECRET，禁止入库
+references/config.json
+
+# python 缓存
+__pycache__/
+*.pyc
+
+# 运行产物
+outputs/
+*.log
+.DS_Store
