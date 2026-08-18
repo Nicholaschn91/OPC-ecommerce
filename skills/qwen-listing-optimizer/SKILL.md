@@ -1,6 +1,7 @@
 ---
 name: qwen-listing-optimizer
 description: "[阶段1·文案+视觉方案·千问Qwen3.8-Max·线一/线二] 真实驱动千问网页端 Qwen3.8-Max 执行 Listing 终版优化（标题/Description/Tags/承诺审批区 + 视觉 Prompt×7）。线一(新上架全量)默认开视觉；线二(在售迭代)默认小改、视觉需用户主动开。触发词：跑终版/优化 listing/批量优化/生成标题描述视觉/新 listing 上架/在售 listing 优化。每条 listing 独立新建对话窗口。需中国大陆出口 IP。终版不接关键词词库（词库由 listing-v1-seo-builder 初版消费）。"
+version: v1.0
 ---
 
 > ⚠️ **版本声明（2026-08-10 MCP 化修订）**：本 skill 原执行层为**手搓 Playwright**（`scripts/optimize-one.js` 等自起 Chromium）。用户于 2026-08-08 立「浏览器控制铁律：只认 MCP、禁手搓 Playwright」，故已**废除手搓脚本**（归档于 `scripts/_deprecated_handrolled_playwright/`），执行层全面改为 **`playwright-qwen` MCP 驱动**。端到端已于 2026-08-10 在国内 IP 环境实测跑通（详见「验证状态」）。

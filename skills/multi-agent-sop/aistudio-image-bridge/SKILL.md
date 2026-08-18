@@ -1,6 +1,7 @@
 ---
 name: aistudio-image-bridge
 description: 通过 AI Studio 网页端（aistudio.google.com）驱动 Nano Banana 2 Lite 模型（gemini-3.1-flash-lite-image），以"Images only"模式为飞书多维表格商品的「设计方案」中每组 prompt 分别生成设计图片，下载后上传至飞书 Drive 以附件形式回写同条记录的「设计方案图片」字段（type 17 attachment）。当用户要"用 AI Studio 生成商品设计图 / Nano Banana 生图 / 回写飞书设计方案图片"时使用。仅认 MCP（mcp__browser_aistudio__browser_*）驱动浏览器，禁止手搓 Playwright 脚本。
+version: v1.0
 ---
 
 > 🔒 **LOCKED · v1.0 定稿版 · 2026-08-14 · 不要再改**

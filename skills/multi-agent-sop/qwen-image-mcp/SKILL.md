@@ -3,6 +3,7 @@ name: qwen-image-mcp
 description: "[阶段2·图生图·千问Qwen-Image2.0·备选] 通过 browser-qwen MCP 或确定性 CLI（scripts/qwen_gen.py）驱动千问「AI生图」，做图生图并下载无水印原图 + verify-img.py 落实度预筛 + 整页 list 收割。⚠️ 生图须走 CloakBrowser 隐身路线（A 路线）避开千问指纹风控，详见文末「确定性 CLI 路线」。仅用于「线一全量」与「线二全量」两条需垫图的线。定位为 doubao-image-mcp 的备选/兜底（豆包 UI 探明度低或用户指定走千问时）。触发词：用千问出图/千问图生图/下载千问生成图/千问垫图闭环。完整替代已废弃的 qianwen-image-downloader。"
 
 > 🔒 **LOCKED · v1.0 定稿版 · 2026-08-14 · 不要再改** · 傻瓜式说明书
+version: v1.0
 ---
 
 # qwen-image-mcp — 千问 AI生图（MCP 驱动）

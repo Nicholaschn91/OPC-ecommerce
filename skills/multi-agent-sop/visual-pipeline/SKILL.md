@@ -1,6 +1,7 @@
 ---
 name: visual-pipeline
 description: "[视觉线总入口·三选一] 在 aistudio(文生图·免费·无参考图) / doubao(图生图·Seedream5.0Lite·需垫图) / qwen(图生图·Qwen-Image·需垫图) 三条生图线间做选择，每条线生图后接对应去水印器，落地即无水印原图到 _e2e_out/<spu>/img/。触发词：生成listing图 / 视觉线 / 生图 / 出图 / 三选一 / 图片线 / 配图。⚠️ aistudio 去水印器(aistudio-raw-grabber)待用户给，当前占位用 blob 下载。"
+version: v1.0
 ---
 
 # visual-pipeline — 视觉线三选一编排入口

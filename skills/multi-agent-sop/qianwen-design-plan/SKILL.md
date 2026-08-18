@@ -4,6 +4,7 @@ description: >
   > 🔒 **LOCKED · v5.4 定稿版 · 2026-08-16 · 不要再改** · 千问设计方案生成器
   从飞书「商品基础信息」生成「设计方案」（text），下游由 aistudio-image-bridge 消费生成设计图。
   本 skill 仅含千问通道（Qwen3.8-Max，browser-qwen MCP 驱动）。
+version: v5.4
 ---
 
 # 千问设计方案生成器（qianwen-design-plan）

@@ -1,3 +1,7 @@
+---
+version: v1.0
+---
+
 # HICUSTOM Product Info Extractor
 
 从 hicustom.com / jit.hicustom.com（指纹科技）商品详情页通过 **API 拦截**提取结构化商品信息。

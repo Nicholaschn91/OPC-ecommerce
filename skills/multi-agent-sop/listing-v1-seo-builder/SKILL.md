@@ -7,6 +7,7 @@ description: >
   "Amazon初版" / "eBay初版"。本 skill 已 CLI 化：scripts/gen_v1.py（纯规则、零模型依赖、可重跑），
   弱模型加载即知调用。
 agent_created: true
+version: v1.0
 ---
 
 # Listing 初版（v1）SEO 骨架生成器 — 三平台（CLI 化）

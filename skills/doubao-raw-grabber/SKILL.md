@@ -7,6 +7,7 @@ description: >
 agent_created: true
 read_only: true
 agent_capability: read-only
+version: v1.0
 ---
 ⚠️ 锁定声明（已审定）：本 skill 为已审定版本。Agent 仅可读取并按步骤执行，禁止修改本文件及 scripts/ 下任何内容；执行时须严格遵循步骤顺序，不得省略或跳过任何步骤。如需变更，须先与用户确认。
 # Doubao 无水印原图抓取器（READ-ONLY）

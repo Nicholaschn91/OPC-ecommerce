@@ -1,3 +1,7 @@
+---
+version: v1.0
+---
+
 # AI Studio 设计方案生成器（aistudio-design-plan，回退通道）
 
 > 🔒 **LOCKED · v1.0 定稿版 · 2026-08-14 · 不要再改**

@@ -4,6 +4,7 @@ description: "[阶段2·图生图·豆包Seedream5.0Lite·首选] 通过 CLI（s
 
 > 🔒 **LOCKED · v1.0 定稿版 · 2026-08-14 · 不要再改** · 傻瓜式说明书
 agent_created: true
+version: v1.0
 ---
 
 > 🛠️ **维护声明（2026-08-13 已解锁）**：本 skill 经 home-workbuddy 实测修复（CDN 正则过期 + 拟人化抖动 + 图片识别验证暂停，均已落盘进 `scripts/`）。现处于可维护状态：改动须经实测验证后提交，commit 带上 `[agent: home-workbuddy]` trailer。
