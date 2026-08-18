@@ -1,0 +1,46 @@
+# BRIA-RMBG-2.0 ONNX 服务 - RTX 2060 Super 8GB 专属优化
+services:
+  rmbg-api:
+    build: .
+    container_name: rmbg-service
+    restart: always
+
+    # ✅ GPU 直通 (2060S 8GB 独占)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        # ✅ 内存/CPU 上限, 留余量防 OOM Kill
+        limits:
+          memory: 6G          # 留 2GB 给系统 + 显存溢出缓冲
+          cpus: '4'           # 2060S 配套 CPU 通常 4-6 核
+
+    # ✅ 模型 & 缓存挂载 (换模型/清缓存不用重建镜像)
+    volumes:
+      - ./models:/app/models      # 放 rmbg2.onnx
+      - ./cache:/app/cache        # 持久化抠图缓存
+      - ./logs:/app/logs          # 日志持久化
+
+    environment:
+      ONNXRUNTIME_GPU_MEM_LIMIT: 5368709120  # 限制 GPU 显存 5GB, 防 OOM (main.py 会读入 CUDA provider)
+      CUDA_VISIBLE_DEVICES: 0
+
+    ports:
+      - "8000:8000"
+
+    # ✅ 健康检查 (预留 90 秒模型加载时间)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"       # 单日志文件上限
+        max-file: "3"         # 保留 3 个轮转文件

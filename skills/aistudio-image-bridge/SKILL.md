@@ -324,6 +324,36 @@ D:/anaconda/python.exe scripts/bria_batch_cutout.py --base path1_out --mode pod_
 # gated 仓库必需：--hf-token hf_xxx 或 设 env HF_TOKEN
 ```
 
+### ONNX Runtime GPU 部署（RTX 2060 Super 8GB 专属 · 用户 2026-08-18 拍板）
+
+> 与上面 CPU/PyTorch 服务（`bria_rmbg_server.py`）是**同一套 `/remove_background` 协议**的两条部署路径：本机无 GPU 时用 CPU 服务；**有 RTX 2060S 的机器**用此 Docker 部署跑 ONNX GPU，吞吐与延迟更优。
+
+**文件位置**：`deploy/onnx-gpu-2060s/`（`Dockerfile` / `requirements.txt` / `docker-compose.yml` / `main.py`）。
+
+**用户三条硬约束（已落进 main.py）**：
+1. **禁止输入尺寸缩放**：`preprocess()` 固定 `MODEL_INPUT_SIZE=1024`，无任何 `min(img.size)` 缩放分支；输出 mask 归回**原图分辨率**（生产必须保持原始分辨率抠图）。
+2. **ONNX 路径固定** `/app/models/rmbg2.onnx`（对应 compose 的 volume 挂载，换模型不重建镜像）。
+3. **显存安全阀**：`nvidia-smi` 显存 >7.5GB 时，把 `docker-compose.yml` 的 `ONNXRUNTIME_GPU_MEM_LIMIT` 从 5GB 降到 4GB 并重启。`main.py` 会**读取该环境变量并注入 CUDA provider 的 `gpu_mem_limit`**，使其真实生效（ORT 不会自动读这个名字的环境变量）。
+
+**2060S 调优要点**（沿用用户规格）：CUDA 11.8（不用 12.x，2060S 兼容性差）、FP32 推理（**别开 FP16**，2060S FP16 弱于 FP32）、单 worker（`--workers 1`，多 worker 会复制显存）、`memory limit 6G` 留 2GB 缓冲、`start_period 90s` 防误判 unhealthy。
+
+**获取 `rmbg2.onnx`（关键，易踩坑）**：
+- 仓库 `onnx/` 目录里有 6 个变体：`model_bnb4` / `model_fp16`(513MB) / `model_int8` / `model_q4` / `model_quantized` / `model_uint8`。**标准 FP32 的 `model.onnx` 当时还在下载（`.incomplete` 残留），下载完才是目标。**
+- ✅ 用 **FP32 的 `model.onnx`**（全精度）→ 复制到 2060S 主机的 `./models/rmbg2.onnx`。
+- ❌ **禁用 `model_fp16.onnx`**（用户明确 2060S 别开 FP16）。
+- 复制命令（在已下全的机器上）：`cp models/rmbg-2.0/onnx/model.onnx <2060S主机>/models/rmbg2.onnx`
+
+**部署步骤**（在 2060S 主机，需 Docker + nvidia-container-toolkit）：
+```bash
+mkdir -p models cache logs
+# 把 rmbg2.onnx 放进 ./models/
+docker compose up -d --build
+# 验证 GPU 识别:
+docker exec rmbg-service python -c "import onnxruntime; print(onnxruntime.get_available_providers())"
+# 应输出: ['CUDAExecutionProvider', 'CPUExecutionProvider']
+docker compose logs -f
+```
+
 ### 模型路由与质检设计（transparent-background 未来集成参考 · 用户 2026-08-18 拍板）
 
 > 当前阶段**只跑通 BRIA-RMBG-2.0**（首选）。`transparent-background` 作为**备选/兜底**，待需求上升再由用户显式安排接入。下方路由与质检规格为未来集成时的设计基线，先固化以免丢失。

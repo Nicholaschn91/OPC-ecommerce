@@ -12,11 +12,14 @@ alpha 蒙版 → 透明 PNG。
   - DPI 校正 + 尺寸归一化预处理：避免异常输入导致模型失效
   - 结构化 metadata 返回：让 Agent 能读懂结果状态并正确回应
 
-依赖（用户负责安装；权重 briaai/RMBG-2.0 首次运行自动下载，约 500MB）：
+依赖（用户负责安装；权重用本地目录加载，无需运行时鉴权）：
   pip install torch torchvision pillow transformers numpy kornia
-  # ⚠️ briaai/RMBG-2.0 是 GATED 仓库：首次运行前必须先 HUGGINGFACE 鉴权，否则 401
+  # 权重复用本地目录（推荐，免鉴权）：
+  #   huggingface-cli download briaai/RMBG-2.0 --local-dir ./models/rmbg-2.0
+  #   运行时设 RMBG_MODEL_DIR=./models/rmbg-2.0 即走本地（脚本已自动识别）
+  # ⚠️ briaai/RMBG-2.0 是 GATED 仓库：首次下载权重前必须先 HUGGINGFACE 鉴权，否则 401
   #   1) 浏览器打开 https://huggingface.co/briaai/RMBG-2.0 点「Agree」接受许可
-  #   2) huggingface-cli login  （或设环境变量 HF_TOKEN=你的 read token）
+  #   2) huggingface-cli login  （或设环境变量 HF_TOKEN=你的 read token 后再 download）
   # ⚠️ numpy 体系必须与 torch 一致（D:/anaconda/python.exe 的踩坑清单，2026-08-18 实测）：
   #   anaconda 自带 numpy1.x 编译的 scipy/sklearn/pandas/pyarrow/numexpr/bottleneck 会与
   #   用户站 numpy2.x(torch/transformers 所在) ABI 冲突 → 全部 --user 重装到用户站：
@@ -102,9 +105,18 @@ def _preprocess(image_url):
 # ---- 模型加载（单例缓存，供重试复用）--------------------------------------
 _MODEL_CACHE = {}
 
+def _resolve_model_id(model_id):
+    """若设了 RMBG_MODEL_DIR 且为有效目录，则改从本地目录加载（运行时无需 HF 鉴权）。"""
+    local = os.environ.get("RMBG_MODEL_DIR")
+    if local and os.path.isdir(local):
+        return local
+    return model_id
+
+
 def _load_model(model_id, device, token=None):
     import torch
     from transformers import AutoModelForImageSegmentation
+    model_id = _resolve_model_id(model_id)
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     key = (model_id, device)
