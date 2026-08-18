@@ -3,7 +3,7 @@ name: aistudio-image-bridge
 description: 通过 AI Studio 网页端（aistudio.google.com）驱动 Nano Banana 2 Lite 模型（gemini-3.1-flash-lite-image），以"Images only"模式为飞书多维表格商品的「设计方案」中每组 prompt 分别生成设计图片，下载后上传至飞书 Drive 以附件形式回写同条记录的「设计方案图片」字段（type 17 attachment）。当用户要"用 AI Studio 生成商品设计图 / Nano Banana 生图 / 回写飞书设计方案图片"时使用。仅认 MCP（mcp__browser-aistudio__browser_*）驱动浏览器，禁止手搓 Playwright 脚本。
 ---
 
-> 🔒 **v1.1 · Rerun 闭环 2026-08-18 据实测订正（点「报错 model turn 自身」的 Rerun，禁回退到"点 user turn"误法）· 核心铁律与 §4 必须一致**
+> 🔒 **v1.2 · 2026-08-18 补强：① 失败速查表与 §4 统一为「点报错 model turn 自身 Rerun」（清除遗留的 user 气泡误法）② 新增限流熔断（RATE_LIMITED 检测 + 批量 runner 命中即停）· 核心铁律与 §4 必须一致**
 
 # AI Studio Image Bridge — Nano Banana 2 Lite 生图流水线
 
@@ -281,6 +281,8 @@ python scripts/path1_clean_grab.py --prompt-file prompt.txt --out ./out
 
 **注意**：该脚本不依赖 `browser-aistudio` MCP，而是直接走 CDP WebSocket；它只负责生图+抓干净字节，飞书回写仍用 `scripts/write_image_attachment.py`。
 
+**限流熔断（2026-08-18 补强）**：脚本每轮轮询与 Rerun 前都会用 `RATECHECK` 扫描整个 `document.body` 文本，命中 `rate limit / too many requests / try again later` 即判定 `RATE_LIMITED`，立即中止轮询与空耗重试、`exit(10)`。批量 runner（`run_ab_clean.py`）见到 `exit(10)` 或 stdout 含 `RATE_LIMITED` 会**立即停止整批**——因为免费额度是账户级时间窗限额，同窗口内后续 prompt 必败，继续跑只是浪费。限流恢复只能等窗口重置，无法靠重试绕过。DIAG 也改为抓取 `body.innerText`，确保限流横幅（位于 `ms-chat-turn` 之外）能落进日志，不再"看不见"而误判为静默失败。
+
 ## 图生图（img2img）轮次
 
 在 **Images only** 模式下：
@@ -321,10 +323,11 @@ python scripts/write_image_attachment.py <record_id> ./<record_id>_*.png
 |---|---|
 | "Upgrade to unlock more" 横幅 | **忽略**，免费模型照常跑 |
 | "No API key selected" | **忽略**，不点它 |
-| Run 后 "An internal error has occurred" | 点 **你发送的内容框（user prompt 气泡）**里的 **「Rerun this turn」**（不是模型报错块），不刷新页面（已实测恢复）|
-| 偶发 "permission denied" | 同 Rerun this turn：点 **user 内容框**的「Rerun this turn」，**绝不重复发送 prompt、绝不查登录态当借口** |
+| Run 后 "An internal error has occurred" | 点 **报错的那条 model turn 自身**里的 **「Rerun this turn」**（不是 user 内容框），用 `browser_evaluate` 派发 `mousedown+mouseup+click` 绕过 overlay，不刷新页面（已实测恢复）|
+| 偶发 "permission denied" | 同 internal error：点 **报错 model turn 自身**的「Rerun this turn」，**绝不重复发送 prompt、绝不查登录态当借口** |
 | 文本框填不进 / Run 不 enabled | 改用 evaluate `nativeInputValueSetter` 触发 input 事件（见步骤 2）|
 | 导航超时 | 检查代理 127.0.0.1:7897 是否运行 |
+| Run 后 "You've reached your rate limit / Too many requests" | **免费额度限流**：`path1_clean_grab.py` 检测到 `RATE_LIMITED` 会立即中止轮询与空耗重试并 `exit(10)`；批量 runner 命中即**熔断整批**（不再继续烧后续 prompt）。这是账户级时间窗限额，**等窗口重置后重试单条**，连点必败 |
 | 下载后找不到文件 | 先查 MCP 沙箱 `.playwright-mcp/Generated-Image*`；若用 evaluate 点击 Download，再查 `C:\Users\<user>\Downloads\Generated Image*` |
 | 飞书写后回读为空 | 附件字段整体替换，必须一次性传全部图片再 PUT |
 | 飞书报 TOKEN FAIL | 检查 `references/config.json` 是否填入正确的 APP_ID/APP_SECRET |
@@ -333,7 +336,7 @@ python scripts/write_image_attachment.py <record_id> ./<record_id>_*.png
 
 ### 2026-08-11 10:29 验证通过（首测）
 - 模型：Nano Banana 2 Lite（`gemini-3.1-flash-lite-image`），免费、无密钥
-- 流程：navigate → Images only → evaluate 填 prompt → Run → 10:17 报 internal error → 点 **user 内容框**的 **Rerun this turn** → 10:29 出图
+- 流程：navigate → Images only → evaluate 填 prompt → Run → 10:17 报 internal error → 点 **报错 model turn 自身**的 **Rerun this turn** → 10:29 出图
 - 产物：`Generated Image August 11, 2026 - 10_29AM.png`，**1408×768，874KB**
 - 结论：免费模型 + Rerun 恢复 = 稳定可用，闭环成立
 

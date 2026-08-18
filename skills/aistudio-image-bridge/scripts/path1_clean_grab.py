@@ -207,10 +207,19 @@ def main():
               " for(let t of turns) if(/an\\s+internal\\s+error\\s+has\\s+occurred/i.test(t.textContent||'')) return 'STILL_ERROR';"
               " return 'PENDING'; }")
 
+    RATECHECK = ("() => { const txt=(document.body&&document.body.innerText)||'';"
+                 " if(/rate\\s*limit|too many requests|try again later/i.test(txt)) return 'RATE_LIMITED';"
+                 " return 'NO_RATE'; }")
+
     # poll generation up to --wait seconds
     final_state = "PENDING"
     deadline = time.time() + args.wait
     while time.time() < deadline:
+        rc = c.evaluate(RATECHECK)
+        if rc == "RATE_LIMITED":
+            final_state = "RATE_LIMITED"
+            print("[poll] rate limited - abort wait")
+            break
         st = c.evaluate(DETECT)
         if st != "NO_ERROR":
             print("[poll] detect:", st)
@@ -227,6 +236,11 @@ def main():
     # if still pending/no-image, try Rerun on any internal error (up to 2 times)
     if final_state == "PENDING":
         for attempt in range(2):
+            rc = c.evaluate(RATECHECK)
+            if rc == "RATE_LIMITED":
+                final_state = "RATE_LIMITED"
+                print("[rerun] rate limited - abort retries")
+                break
             st = c.evaluate(DETECT)
             if st == "NO_ERROR":
                 vf = c.evaluate(VERIFY)
@@ -246,6 +260,9 @@ def main():
 
     vf = final_state
     print("verify:", vf)
+    if vf == "RATE_LIMITED":
+        print("RESULT: RATE_LIMITED - free-tier cap hit; STOP and resume after window reset")
+        sys.exit(10)
 
     # click Download to trigger clean-original fetch
     if vf == "OK_IMAGE":
@@ -282,8 +299,9 @@ def main():
         print("dom_src:", str(dom_src)[:80], "(not a data URI)")
 
     if vf != "OK_IMAGE":
-        diag = c.evaluate("() => { const t=[...document.querySelectorAll('ms-chat-turn')].map(x=>x.innerText).join('\\n'); return t.slice(0,1200) + (t.length>1200?'...':''); }")
-        print("DIAG turns text:", diag)
+        diag = c.evaluate("() => { const t=[...document.querySelectorAll('ms-chat-turn')].map(x=>x.innerText).join('\\n'); const body=(document.body&&document.body.innerText)||''; const all=(t+'\\n---BODY---\\n'+body).slice(0,2000); return all + (all.length>=2000?'...':''); }")
+        print("DIAG turns/body text:", diag)
+        print("RATECHECK:", c.evaluate(RATECHECK))
     print("DONE")
 
 if __name__ == "__main__":
