@@ -13,8 +13,13 @@ alpha 蒙版 → 透明 PNG。
   - 结构化 metadata 返回：让 Agent 能读懂结果状态并正确回应
 
 依赖（用户负责安装；权重 briaai/RMBG-2.0 首次运行自动下载，约 500MB）：
-  pip install torch torchvision pillow transformers numpy
-  # 国内网络：首次运行前设 HF_ENDPOINT=https://hf-mirror.com 加速
+  pip install torch torchvision pillow transformers numpy kornia
+  # ⚠️ briaai/RMBG-2.0 是 GATED 仓库：首次运行前必须先 HUGGINGFACE 鉴权，否则 401
+  #   1) 浏览器打开 https://huggingface.co/briaai/RMBG-2.0 点「Agree」接受许可
+  #   2) huggingface-cli login  （或设环境变量 HF_TOKEN=你的 read token）
+  # ⚠️ numpy 体系必须与 torch 一致：若 anaconda 自带 numpy1.x 与用户站 numpy2.x 冲突，
+  #   把 scikit-learn/pandas/pyarrow 也 --user 重装到用户站（同 numpy2 ABI）。
+  # 国内网络：首次运行前设 HF_ENDPOINT=https://hf-mirror.com 加速（注意镜像可能未同步该 gated 权重）
 
 CLI（契约对齐 Agent Tool Definition）：
   python bria_rmbg_cutout.py --image-url clean.jpg --mode pod_print --out clean_cut.png
@@ -181,6 +186,14 @@ def _add_shadow(rgba, offset=(0, 10), blur=14, opacity=0.35):
     dark.putalpha(shadow)
     dark.putalpha(dark.split()[3].point(lambda a: int(a * opacity)))
     return Image.alpha_composite(dark, rgba)
+
+
+# ---- 预加载（供 FastAPI server 启动时 warm the cache）-----------------------
+def warmup(model_id=None, device=None):
+    """预加载模型到 _MODEL_CACHE；server 启动事件里调用一次即可。"""
+    if model_id is None:
+        model_id = MODE_PRESETS["pod_print"]["model"]
+    _load_model(model_id, device)
 
 
 # ---- 主接口 ----------------------------------------------------------------

@@ -293,6 +293,10 @@ python scripts/path1_clean_grab.py --prompt-file prompt.txt --out ./out
 **依赖（用户负责安装）**：`pip install torch torchvision pillow transformers numpy` + RMBG-2.0 权重（首次运行自动下载，约 500MB；国内 `HF_ENDPOINT=https://hf-mirror.com` 加速）。脚本对缺失依赖会给出明确安装提示并 `exit(2)`，不静默失败。
 
 **后端实现**（`scripts/bria_rmbg_cutout.py`）已覆盖以下「Prompt 无法解决、必须由代码保证」的点：
+
+> ⚠️ **运行前置（易踩坑，2026-08-18 实测）**：
+> 1. `briaai/RMBG-2.0` 是 **GATED 仓库**——首次运行前必须 `huggingface-cli login`（先在 https://huggingface.co/briaai/RMBG-2.0 点 Agree 接受许可）或设 `HF_TOKEN`，否则 `401 Unauthorized` 下不到权重。
+> 2. numpy 二进制必须一致：若 `D:/anaconda/python.exe` 同时加载 anaconda 的 numpy1.x（绑 pandas/pyarrow/sklearn）与用户站的 numpy2.x（torch/transformers），会 `numpy.dtype size changed` 崩溃。修法：把 `scikit-learn pandas pyarrow` 也 `--user` 重装到用户站（同 numpy2 ABI）。验证命令见 `bria_rmbg_cutout.py` 顶部依赖段。
 - `MODE_PRESETS`：pod_print/product/portrait 各自绑定 RMBG-2.0 + 最优 matting 参数（POD 锐边 / 商品柔边 / 人像发丝）。
 - 质量自检 + 阈值：`_qc()` 用前景占比与边缘一致性打分，<0.6 判不合格。
 - 重试 / 降级 / 兜底：最多 3 次，逐次加大锐度 + 中值滤波清理；全失败标记 `partial` 并带 warning。
@@ -305,6 +309,14 @@ python scripts/bria_rmbg_cutout.py --image-url clean.jpg --mode pod_print --out 
 python scripts/bria_rmbg_cutout.py --image-url clean.jpg --mode product --keep-shadow true
 python scripts/bria_rmbg_cutout.py --image-url clean.jpg --mode pod_print --matting-strength 1.0 --meta meta.json
 ```
+
+**FastAPI 服务化**（`scripts/bria_rmbg_server.py`，v1.0 新增）：把同一套已验证内核包成 HTTP 服务，供 Agent 以 Function Calling 方式远程调用 `/remove_background`。
+
+- 复用 `bria_rmbg_cutout.py` 的 `remove_background()` 内核（matting/QC/重试/DPI/metadata 全在内核里，server 不重写逻辑 → 不会重蹈「pipeline 误传 matting 参数 / matting_strength 未生效 / keep_shadow 未用」的坑）。
+- 输入支持三种来源：`http(s)` URL / `data:image/...;base64,...` / 本地路径；输出返回 PNG `base64` + 结构化 `metadata`。
+- 启动：`D:/anaconda/python.exe -m uvicorn bria_rmbg_server:app --host 127.0.0.1 --port 8123`（需 fastapi+uvicorn，已装 0.136.1 / 0.46.0）。
+- 端点：`POST /remove_background`（body 同 Tool Definition：`image_url, mode, keep_shadow, matting_strength, out?`）、`GET /health`。
+- 注意：`bria_rmbg_server.py` 与 `bria_rmbg_cutout.py` 必须**同目录**，server 启动时会 `import bria_rmbg_cutout` 并 `warmup()` 预加载模型到缓存。
 
 ### Agent 配置（复制到 Agent 系统提示词 / 工具列表）
 
@@ -361,11 +373,17 @@ python scripts/bria_rmbg_cutout.py --image-url clean.jpg --mode pod_print --matt
 }
 ```
 
+**回写铁律（用户 2026-08-18 拍板「从哪里取用就回写哪一行 + 合并」）**：
+1. **按来源行回写**：每一张设计图的来源 record_id（即生成该图所依据的表 2 记录）必须随取用/生成环节被记录，回写时**原路写回该 record_id 的「设计方案图片」**，绝不串写到其他行。
+2. **默认合并**：原图 + BRIA 抠图**追加**到该记录已有图片之后，不清空已有内容；仅显式 `--overwrite` 才覆盖。
+
+> 注：表 2 是「一记录 = 一商品(SKU)，内含全平台字段」的扁平结构，**无「设计方向/平台」独立维度**；故回写目标行不能从表 2 自动反推，必须由取用侧显式提供 `{方向: record_id}` 映射（见 `writeback_designs.py --map`）。
+
 **飞书回写约定（用户 2026-08-18 拍板）**：每条设计方案回写时，**原始干净图 + BRIA 抠图一并**写入「设计方案图片」字段。用 `writeback_designs.py` 批量（传入 `{方向: record_id}` 映射），或直接：
 ```bash
 python scripts/write_image_attachment.py <record_id> <original.jpg> <cutout_bria.png>
 ```
-回写后按飞书铁律用**列表接口**回验（非单条 GET，避免最终一致性陷阱）。overwrite/merge 由 `writeback_designs.py --merge` 控制（默认覆盖）。
+回写后按飞书铁律用**列表接口**回验（非单条 GET，避免最终一致性陷阱）。**默认合并**（`writeback_designs.py` 不加 `--overwrite` 即追加），仅 `--overwrite` 才清空已有图片后写入。
 
 ## 图生图（img2img）轮次
 

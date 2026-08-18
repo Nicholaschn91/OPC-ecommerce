@@ -22,7 +22,8 @@
 
 Usage:
   python writeback_designs.py --map mapping.json
-  python writeback_designs.py --map mapping.json --merge      # 合并已有图片
+  python writeback_designs.py --map mapping.json             # 默认合并已有图片
+  python writeback_designs.py --map mapping.json --overwrite  # 显式覆盖（清空该记录已有图片）
   python writeback_designs.py --map mapping.json --skip-cutout --base path1_out  # 假设抠图已生成
 """
 import argparse
@@ -46,8 +47,10 @@ def main():
                     help="JSON 映射 {dir: record_id} 或 [{dir, record_id}]")
     ap.add_argument("--base", default="path1_out",
                     help="原图根目录 (默认 path1_out)")
-    ap.add_argument("--merge", action="store_true",
-                    help="合并已有图片而非覆盖（默认覆盖）")
+    ap.add_argument("--merge", action="store_true", default=True,
+                    help="合并已有图片而非覆盖（默认开启）")
+    ap.add_argument("--overwrite", dest="merge", action="store_false",
+                    help="显式覆盖：清空该记录已有图片后写入")
     ap.add_argument("--skip-cutout", action="store_true",
                     help="假设抠图已存在，不再生成")
     args = ap.parse_args()
